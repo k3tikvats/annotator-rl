@@ -34,8 +34,12 @@ from openai import OpenAI
 
 # Add parent to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from annotation_qa_env.models import AnnotationQAAction, AnnotationQAObservation
-from annotation_qa_env.server.environment import AnnotationQAEnvironment
+try:
+    from annotation_qa_env.models import AnnotationQAAction, AnnotationQAObservation
+    from annotation_qa_env.server.environment import AnnotationQAEnvironment
+except ImportError:
+    from models import AnnotationQAAction, AnnotationQAObservation
+    from server.environment import AnnotationQAEnvironment
 
 # ──────────────────────────────────────────────
 # Configuration

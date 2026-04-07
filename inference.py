@@ -1,5 +1,5 @@
 """
-Inference Script — Annotation QA Environment (VLM Edition with Spatial Overlay)
+Inference Script — Annotation QA Environment (72B One-Shot VQA + Set-of-Mark)
 ==========================================================
 MANDATORY
 - Before submitting, ensure the following variables are defined:
@@ -9,18 +9,19 @@ MANDATORY
 
 - STDOUT MUST EXACTLY follow [START], [STEP], and [END] formats.
 
-VLM & VISUAL SPATIAL OVERLAY
-- Uses Qwen/Qwen3-VL-8B-Instruct (or any VLM) via OpenAI-compatible API
-- To solve the problem of VLMs struggling with raw float coordinates, we
-  intercept the image at every step and use Pillow to draw the current bounding  
-  boxes, their IDs, and a faint coordinate grid directly onto the image bytes.
-- The VLM receives a literal marked-up image ("Set-of-Mark" style prompting).
+72B ONE-SHOT VQA APPROACH
+- Uses Qwen2.5-VL-72B-Instruct for incredibly high spatial accuracy.
+- To bypass rigid API rate limits and token costs, the script makes EXACTLY 
+  ONE API CALL per image. 
+- The VLM acts as a visual reviewer, grading every single box in text format.
+- The Python loop then mechanically executes those parsed actions.
 """
 
 import base64
 import io
 import json
 import os
+import re
 import sys
 import textwrap
 import urllib.request
@@ -44,49 +45,49 @@ except ImportError:
 LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
 HF_TOKEN = os.getenv("HF_TOKEN")
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
-MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen3-VL-8B-Instruct")
+MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-VL-72B-Instruct")
 
 BENCHMARK = "annotation_qa_env"
 TASKS = ["fix_bboxes", "fix_classes", "batch_audit"]
 MAX_STEPS_PER_TASK = {"fix_bboxes": 15, "fix_classes": 20, "batch_audit": 30}
 TEMPERATURE = 0.2
-MAX_TOKENS = 500
+MAX_TOKENS = 1500
 SUCCESS_SCORE_THRESHOLD = 0.1
 
-# Raw Image cache: Store downloaded PIL images so we can redraw them per-step without downloading.
+# Raw Image cache
 _raw_image_cache = {}
 
 SYSTEM_PROMPT = textwrap.dedent("""
-You are an AI annotation quality reviewer. You have EXCELLENT spatial awareness because you are evaluating a MARKED-UP image.
+You are a highly precise AI visual inspector reviewing annotated datasets.
+You will be provided an image containing multiple drawn objects.
+Every object has a thick colored bounding box and a distinct label showing `[ID: <number> | <class_label>]`.
 
-You will receive an image with:
-1. A red grid over it. The lines represent normalized X and Y coordinates from 0.0 to 1.0 (in increments of 0.1).
-2. Thick brightly-colored bounding boxes drawn over the objects.
-3. A large text label above each box indicating `[ID: <num> | <class_label>]`.
+Your task is to analyze EVERY SINGLE box drawn on the image systematically and check for two types of errors:
+1. WRONG CLASS: The box surrounds an actual object, but the text label inside the ribbon is incorrect (e.g. ribbon says `dog` but it's a `cat`).
+2. SPURIOUS/EMPTY: The box encircles nothing but empty space or background (e.g. wall, sky, street) and therefore should be deleted.
 
-Your task is to visually inspect these boxes:
-- Check if the box matches its class label.
-- Check if the box tightly bounds the object without covering too much empty space.
-- Look out for boxes that cover completely empty space or background (Spurious).
-- Look out for visible objects that are missing a box.
+IF it tightly binds the object and the label is correct, its status is KEEP.
 
-AVAILABLE ACTIONS (respond with valid JSON only):
-- To fix a bad box, output: {"action_type": "adjust_bbox", "annotation_id": <id>, "new_bbox": [x, y, w, h]}
-- To fix a wrong class label, output: {"action_type": "change_class", "annotation_id": <id>, "new_class": "<class>"}
-- To add a missing object, output: {"action_type": "add_annotation", "new_bbox": [x, y, w, h], "new_class": "<class>"}
-- To delete a spurious box, output: {"action_type": "remove_annotation", "annotation_id": <id>}
-- To submit (when everything looks perfect), output: {"action_type": "submit"}
+You MUST respond strictly with a line-by-line list grading every single ID you see on the screen.
+Use EXACTLY this format and nothing else:
 
-All spatial coordinates you output (for add_annotation or adjust_bbox) MUST be in the `[x, y, w, h]` format normalized to 0.0-1.0. 
-Use the red grid lines to estimate these coordinates.
+ID <number>: KEEP
+ID <number>: CHANGE_CLASS <new_correct_class_name>
+ID <number>: REMOVE
 
-Focus exclusively on what you literally SEE drawn on the image compared to the underlying photo. Fix one error at a time, prioritizing the most obvious ones.
+Example Output:
+ID 0: KEEP
+ID 1: CHANGE_CLASS truck
+ID 2: REMOVE
+ID 3: KEEP
+ID 14: KEEP
+ID 15: CHANGE_CLASS skateboard
 
-OUTPUT A SINGLE JSON OBJECT AND NOTHING ELSE.
+Do NOT Output any other text, no intro, no json, no explanation. Just the list.
 """).strip()
 
 # ──────────────────────────────────────────────
-# Logging helpers (exact format from problem statement)
+# Logging helpers
 # ──────────────────────────────────────────────
 
 def log_start(task: str, env: str, model: str) -> None:
@@ -111,11 +112,10 @@ def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> No
 
 
 # ──────────────────────────────────────────────
-# Image Overlays ("Set-of-Mark")
+# Image Overlays
 # ──────────────────────────────────────────────
 
 def get_base_image(image_url: str, max_dim: int = 768):
-    """Download and resize an image from URL, caching the PIL Image in memory."""
     from PIL import Image
 
     if image_url in _raw_image_cache:
@@ -128,6 +128,7 @@ def get_base_image(image_url: str, max_dim: int = 768):
 
         img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
         w, h = img.size
+        # For 72B VQA, higher resolution is better. Scale proportionally.
         if max(w, h) > max_dim:
             scale = max_dim / max(w, h)
             new_w, new_h = int(w * scale), int(h * scale)
@@ -141,28 +142,21 @@ def get_base_image(image_url: str, max_dim: int = 768):
 
 
 def fetch_annotated_image_as_base64(obs: AnnotationQAObservation, debug_save: bool = False) -> str:
-    """
-    Downloads raw image, draws coordinate grid and all bounding boxes with IDs,
-    and returns a base64 encoded jpeg.
-    """
     try:
         from PIL import ImageDraw, ImageFont
     except ImportError:
-        return "" # Should have Pillow installed via reqs
+        return "" 
 
     img = get_base_image(obs.image_url)
     if img is None:
         return ""
 
-    # Make a fresh copy for this step
     canvas = img.copy()
     draw = ImageDraw.Draw(canvas, "RGBA")
     w, h = canvas.size
 
-    # Try to load a reasonable font size
     try:
-        # Windows typically has arial.ttf, Linux has DejaVuSans, fallback to default if not found
-        fontsize = max(12, int(h * 0.025))
+        fontsize = max(14, int(h * 0.03))
         try:
             font = ImageFont.truetype("arial.ttf", fontsize)
         except OSError:
@@ -173,24 +167,6 @@ def fetch_annotated_image_as_base64(obs: AnnotationQAObservation, debug_save: bo
     except Exception:
         font = ImageFont.load_default()
 
-    # 1. Draw the Faint Coordinate Grid
-    # Draw lines every 0.1 normalized unit
-    grid_color = (255, 0, 0, 80) # Semi-transparent red
-    text_color = (255, 0, 0, 180)
-    
-    for i in range(1, 10):
-        val = i / 10.0
-        # Vertical line (X-axis demarcations)
-        x_px = int(val * w)
-        draw.line([(x_px, 0), (x_px, h)], fill=grid_color, width=1)
-        draw.text((x_px + 2, 5), f"{val:.1f}", fill=text_color, font=font)
-        
-        # Horizontal line (Y-axis demarcations)
-        y_px = int(val * h)
-        draw.line([(0, y_px), (w, y_px)], fill=grid_color, width=1)
-        draw.text((5, y_px + 2), f"{val:.1f}", fill=text_color, font=font)
-
-    # 2. Draw the Current Annotations
     colors = [
         (0, 255, 0, 255),    # Green
         (255, 165, 0, 255),  # Orange
@@ -208,48 +184,37 @@ def fetch_annotated_image_as_base64(obs: AnnotationQAObservation, debug_save: bo
         x1 = int((x_norm + w_norm) * w)
         y1 = int((y_norm + h_norm) * h)
         
-        # Draw thick box
-        draw.rectangle([x0, y0, x1, y1], outline=color, width=3)
+        draw.rectangle([x0, y0, x1, y1], outline=color, width=4)
         
-        # Draw label ribbon
         label_text = f" ID:{ann.id} | {ann.class_label} "
-        
-        # Use simple text bbox to size ribbon
-        # Newer Pillow: font.getbbox()
         try:
             bbox = font.getbbox(label_text)
             text_w = bbox[2] - bbox[0]
             text_h = bbox[3] - bbox[1]
         except AttributeError:
-            text_w, text_h = 50, 10
+            text_w, text_h = 60, 15
             
         bg_rect = [x0, max(0, y0 - text_h - 4), x0 + text_w, y0]
         draw.rectangle(bg_rect, fill=color)
         draw.text((x0, max(0, y0 - text_h - 4)), label_text, fill=(0,0,0,255), font=font)
 
-    # Optional saving for debugging
     if debug_save:
         canvas.save("debug_overlay_test.jpg")
 
-    # Encode
     buf = io.BytesIO()
     canvas.save(buf, format="JPEG", quality=85)
     return base64.b64encode(buf.getvalue()).decode("utf-8")
 
 
 # ──────────────────────────────────────────────
-# Prompt building (multimodal)
+# Prompt building
 # ──────────────────────────────────────────────
 
 def build_user_content(obs: AnnotationQAObservation) -> list:
     content_blocks = []
 
-    # 1. Visually Marked-up Image
     if obs.image_url:
-        # We only save debug on the first step of the first sequence 
-        # (This is just a local test mechanism)
         save_debug = (obs.step_count == 0)
-        
         b64 = fetch_annotated_image_as_base64(obs, debug_save=save_debug)
         if b64:
             content_blocks.append({
@@ -259,19 +224,17 @@ def build_user_content(obs: AnnotationQAObservation) -> list:
                 },
             })
 
-    # 2. Textual Fallback / Metadata
-    text = f"""Task: {obs.task_description}
-Step {obs.step_count}/{obs.max_steps}
-Feedback from last action: {obs.message}
+    # Prepare an inventory list of existing IDs so the VLM knows what needs checking
+    inventory = [f"ID {a.id}: {a.class_label}" for a in obs.annotations]
 
-Please find the image attached. YOU CAN SEE BOUNDING BOXES AND IDS ALREADY DRAWN ON IT!
-The numeric grid lines will help you estimate coordinates in normalized format (0.0 to 1.0).
+    text = f"""Please analyze this image. The bounding boxes are clearly drawn with their current labels.
+Available valid COCO classes: {', '.join(obs.available_classes[:20])}... ({len(obs.available_classes)} total).
 
-Look at each box sequentially. If a box has a wrong label, change it. If it doesn't wrap the object tightly or is completely spurious, remove it or adjust it.
-Available COCO classes: {', '.join(obs.available_classes[:20])}... ({len(obs.available_classes)} total).
+Here is the inventory of boxes on screen you MUST review:
+{ chr(10).join(inventory) }
 
-Respond with a valid JSON action fixing ONE error, or submit if perfect."""
-
+Provide your final line-by-line grading of every ID now:
+"""
     content_blocks.append({
         "type": "text",
         "text": text,
@@ -280,64 +243,46 @@ Respond with a valid JSON action fixing ONE error, or submit if perfect."""
     return content_blocks
 
 
-def parse_llm_response(response_text: str) -> AnnotationQAAction:
+def parse_vqa_actions(response_text: str) -> List[AnnotationQAAction]:
+    """Parse the line-by-line plain text output into distinct discrete actions."""
     text = response_text.strip()
-    if text.startswith("```json"): text = text[7:]
-    if text.startswith("```"): text = text[3:]
-    if text.endswith("```"): text = text[:-3]
-    text = text.strip()
-
-    try:
-        data = json.loads(text)
-    except json.JSONDecodeError:
-        import re
-        json_match = re.search(r'\{[^}]+\}', text)
-        if json_match:
-            try:
-                data = json.loads(json_match.group())
-            except json.JSONDecodeError:
-                return AnnotationQAAction(action_type="submit")
-        else:
-            return AnnotationQAAction(action_type="submit")
-
-    # Aggressive sanitization
-    action_type = data.get("action_type", "submit")
-    if action_type not in ["adjust_bbox", "change_class", "add_annotation", "remove_annotation", "submit"]:
-        action_type = "submit"
-
-    ann_id = data.get("annotation_id")
-    if isinstance(ann_id, str):
-        import re
-        match = re.search(r'\d+', ann_id)
-        ann_id = int(match.group()) if match else None
-    elif isinstance(ann_id, (int, float)):
-        ann_id = int(ann_id)
-
-    new_bbox = data.get("new_bbox")
-    if new_bbox is not None and isinstance(new_bbox, list):
-        clean_bbox = []
-        for val in new_bbox:
-            try:
-                clean_bbox.append(float(val))
-            except (ValueError, TypeError):
-                clean_bbox.append(0.0)
-        # Pad or truncate to exactly 4 items
-        clean_bbox = (clean_bbox + [0.0, 0.0, 0.0, 0.0])[:4]
-        new_bbox = clean_bbox
-
-    return AnnotationQAAction(
-        action_type=action_type,
-        annotation_id=ann_id,
-        new_bbox=new_bbox,
-        new_class=str(data.get("new_class")) if data.get("new_class") else None,
-    )
+    actions = []
+    
+    # regex match for "ID X: CHANGE_CLASS dog" or "ID Y: REMOVE"
+    lines = text.split('\n')
+    for line in lines:
+        line = line.strip()
+        match = re.search(r'ID\s*(\d+)[:\-\s]+(.+)', line, re.IGNORECASE)
+        if not match:
+            continue
+            
+        ann_id = int(match.group(1))
+        instruction = match.group(2).strip().upper()
+        
+        if instruction.startswith("REMOVE"):
+            actions.append(AnnotationQAAction(
+                action_type="remove_annotation",
+                annotation_id=ann_id
+            ))
+        elif instruction.startswith("CHANGE_CLASS") or instruction.startswith("CHANGE"):
+            # extract string after CHANGE_CLASS
+            parts = instruction.split()
+            if len(parts) > 1:
+                new_class = " ".join(parts[1:]).lower()
+                actions.append(AnnotationQAAction(
+                    action_type="change_class",
+                    annotation_id=ann_id,
+                    new_class=new_class
+                ))
+                
+    return actions
 
 
 # ──────────────────────────────────────────────
-# LLM interaction
+# Execution logic
 # ──────────────────────────────────────────────
 
-def get_model_action(client: OpenAI, obs: AnnotationQAObservation) -> AnnotationQAAction:
+def get_vqa_actions(client: OpenAI, obs: AnnotationQAObservation) -> List[AnnotationQAAction]:
     user_content = build_user_content(obs)
     try:
         completion = client.chat.completions.create(
@@ -347,20 +292,22 @@ def get_model_action(client: OpenAI, obs: AnnotationQAObservation) -> Annotation
                 {"role": "user", "content": user_content},
             ],
             temperature=TEMPERATURE,
-            max_tokens=500,
+            max_tokens=MAX_TOKENS,
             stream=False,
         )
-        return parse_llm_response(completion.choices[0].message.content or "")
+        response_text = completion.choices[0].message.content or ""
+        print(f"[DEBUG] VLM Output:\n{response_text}\n", flush=True)
+        return parse_vqa_actions(response_text)
     except Exception as exc:
         print(f"[DEBUG] Model request failed: {exc}", flush=True)
-        return AnnotationQAAction(action_type="submit")
+        return []
 
-
-# ──────────────────────────────────────────────
-# Main loop
-# ──────────────────────────────────────────────
 
 def run_task(client: OpenAI, env: AnnotationQAEnvironment, task_name: str) -> float:
+    global _raw_image_cache
+    _raw_image_cache = {} 
+
+    obs = env.reset(task=task_name, seed=42)
     max_steps = MAX_STEPS_PER_TASK.get(task_name, 20)
     rewards: List[float] = []
     steps_taken = 0
@@ -370,27 +317,34 @@ def run_task(client: OpenAI, env: AnnotationQAEnvironment, task_name: str) -> fl
     log_start(task=task_name, env=BENCHMARK, model=MODEL_NAME)
 
     try:
-        obs = env.reset(task=task_name, seed=42)
+        # 1. ONE-SHOT VISUAL INSPECTION
+        # The script makes exactly ONE api call to grade the image
+        actions_to_take = get_vqa_actions(client, obs)
 
-        for step in range(1, max_steps + 1):
-            if obs.done:
+        # 2. LOCAL SEQUENTIAL EXECUTION
+        # Loop through actions independently locally
+        for action in actions_to_take:
+            if obs.done or steps_taken >= max_steps:
                 break
-
-            action = get_model_action(client, obs)
-            
-            action_str = f"{action.action_type}"
-            if action.annotation_id is not None:
-                action_str += f"(id={action.annotation_id})"
                 
+            steps_taken += 1
+            action_str = f"{action.action_type}(id={action.annotation_id})"
+            if action.new_class:
+                action_str += f"[cls={action.new_class}]"
+
             obs = env.step(action)
             reward = obs.reward if obs.reward is not None else 0.0
-            
             rewards.append(reward)
-            steps_taken = step
-            log_step(step, action_str, reward, obs.done, obs.last_action_error)
+            
+            log_step(steps_taken, action_str, reward, obs.done, obs.last_action_error)
 
-            if obs.done:
-                break
+        # 3. SUBMIT
+        if not obs.done and steps_taken < max_steps:
+            steps_taken += 1
+            obs = env.step(AnnotationQAAction(action_type="submit"))
+            reward = obs.reward if obs.reward is not None else 0.0
+            rewards.append(reward)
+            log_step(steps_taken, "submit", reward, obs.done, obs.last_action_error)
 
         if rewards: score = rewards[-1]
         score = max(0.0, min(1.0, score))

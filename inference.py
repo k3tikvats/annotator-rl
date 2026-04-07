@@ -300,11 +300,36 @@ def parse_llm_response(response_text: str) -> AnnotationQAAction:
         else:
             return AnnotationQAAction(action_type="submit")
 
+    # Aggressive sanitization
+    action_type = data.get("action_type", "submit")
+    if action_type not in ["adjust_bbox", "change_class", "add_annotation", "remove_annotation", "submit"]:
+        action_type = "submit"
+
+    ann_id = data.get("annotation_id")
+    if isinstance(ann_id, str):
+        import re
+        match = re.search(r'\d+', ann_id)
+        ann_id = int(match.group()) if match else None
+    elif isinstance(ann_id, (int, float)):
+        ann_id = int(ann_id)
+
+    new_bbox = data.get("new_bbox")
+    if new_bbox is not None and isinstance(new_bbox, list):
+        clean_bbox = []
+        for val in new_bbox:
+            try:
+                clean_bbox.append(float(val))
+            except (ValueError, TypeError):
+                clean_bbox.append(0.0)
+        # Pad or truncate to exactly 4 items
+        clean_bbox = (clean_bbox + [0.0, 0.0, 0.0, 0.0])[:4]
+        new_bbox = clean_bbox
+
     return AnnotationQAAction(
-        action_type=data.get("action_type", "submit"),
-        annotation_id=data.get("annotation_id"),
-        new_bbox=data.get("new_bbox"),
-        new_class=data.get("new_class"),
+        action_type=action_type,
+        annotation_id=ann_id,
+        new_bbox=new_bbox,
+        new_class=str(data.get("new_class")) if data.get("new_class") else None,
     )
 
 

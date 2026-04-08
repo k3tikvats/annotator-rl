@@ -13,6 +13,15 @@ Uses Hungarian matching to optimally pair predicted vs gold annotations.
 from typing import Dict, List, Tuple
 
 
+# Phase 2 validator requires task scores to be strictly within (0, 1).
+SCORE_EPSILON = 0.001
+
+
+def _to_open_unit_interval(value: float) -> float:
+    """Clamp any score to the strict open interval (0, 1)."""
+    return min(1.0 - SCORE_EPSILON, max(SCORE_EPSILON, value))
+
+
 def compute_iou(box_a: List[float], box_b: List[float]) -> float:
     """
     Compute Intersection over Union between two boxes.
@@ -122,11 +131,12 @@ def grade_episode(
 
     max_improvement = 1.0 - initial_quality
     if max_improvement < 0.01:
-        return 1.0 if final_quality >= initial_quality - 0.01 else 0.5
+        base_score = 1.0 if final_quality >= initial_quality - 0.01 else 0.5
+        return round(_to_open_unit_interval(base_score), 4)
 
     improvement = final_quality - initial_quality
     score = improvement / max_improvement
-    return max(0.0, min(1.0, score))
+    return round(_to_open_unit_interval(score), 4)
 
 
 def compute_step_reward(

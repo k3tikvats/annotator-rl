@@ -55,6 +55,7 @@ MAX_STEPS_PER_TASK = {"remove_spurious": 15, "fix_classes": 20, "find_missing": 
 TEMPERATURE = 0.2
 MAX_TOKENS = 1500
 SUCCESS_SCORE_THRESHOLD = 0.1
+SCORE_EPSILON = 0.001
 
 # Raw Image cache
 _raw_image_cache = {}
@@ -116,6 +117,11 @@ def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> No
         f"[END] success={str(success).lower()} steps={steps} score={score:.3f} rewards={rewards_str}",
         flush=True,
     )
+
+
+def clamp_open_score(score: float) -> float:
+    """Clamp scores to the strict open interval (0, 1)."""
+    return min(1.0 - SCORE_EPSILON, max(SCORE_EPSILON, score))
 
 
 # ──────────────────────────────────────────────
@@ -385,12 +391,14 @@ def run_task(client: OpenAI, env: AnnotationQAEnvironment, task_name: str) -> fl
             rewards.append(reward)
             log_step(steps_taken, "submit", reward, obs.done, obs.last_action_error)
 
-        if rewards: score = rewards[-1]
-        score = max(0.0, min(1.0, score))
-        success = score >= SUCCESS_SCORE_THRESHOLD
+        if rewards:
+            score = rewards[-1]
 
     except Exception as exc:
         print(f"[DEBUG] Task {task_name} error: {exc}", flush=True)
+
+    score = clamp_open_score(score)
+    success = score >= SUCCESS_SCORE_THRESHOLD
 
     log_end(success, steps_taken, score, rewards)
     return score

@@ -12,7 +12,7 @@ reliably perform:
 - fix_classes -> prioritize class correction quality
 - find_missing -> prioritize missing-object flag quality
 
-Final task score is always clamped to the strict open interval (0, 1)
+Final task score is always projected into the strict open interval (0, 1)
 to satisfy Phase 2 validator constraints.
 """
 
@@ -33,8 +33,14 @@ TASK_METRIC_WEIGHTS = {
 
 
 def _to_open_unit_interval(value: float) -> float:
-    """Clamp any score to the strict open interval (0, 1)."""
-    return min(1.0 - SCORE_EPSILON, max(SCORE_EPSILON, value))
+    """
+    Project a bounded score in [0, 1] into the strict open interval (0, 1).
+
+    This preserves score ordering across the full range and avoids hard endpoint
+    clipping behavior that can distort comparisons near 0 or 1.
+    """
+    bounded = max(0.0, min(1.0, value))
+    return SCORE_EPSILON + bounded * (1.0 - 2.0 * SCORE_EPSILON)
 
 
 def _weights_for_task(task_id: str | None) -> Dict[str, float]:
@@ -173,12 +179,17 @@ def grade_episode(
 
     max_improvement = 1.0 - initial_quality
     if max_improvement < 0.01:
-        base_score = 1.0 if final_quality >= initial_quality - 0.01 else 0.5
-        return round(_to_open_unit_interval(base_score), 4)
+        # When the starting point is already near-ceiling, evaluate by final quality.
+        raw_score = final_quality
+        return round(_to_open_unit_interval(raw_score), 4)
 
     improvement = final_quality - initial_quality
-    score = improvement / max_improvement
-    return round(_to_open_unit_interval(score), 4)
+    improvement_score = max(0.0, min(1.0, improvement / max_improvement))
+
+    # Blend trajectory improvement with end-state quality for more informative
+    # scoring across easy and hard tasks.
+    raw_score = 0.8 * improvement_score + 0.2 * final_quality
+    return round(_to_open_unit_interval(raw_score), 4)
 
 
 def compute_step_reward(

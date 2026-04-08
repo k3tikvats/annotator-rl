@@ -43,7 +43,7 @@ The environment strictly enforces proper RL (Reinforcement Learning) paradigms r
 - **Clean Boundaries:** The `reset()` function cleanly initializes a fresh scene ID mapping. Episodes logically finalize the moment `SUBMIT` is invoked or max steps are exhausted.
 - **Dense Fractional Reward:** The reward function provides continuous trajectory signaling via `quality_delta = new_quality - old_quality`, with per-step shaping and anti-loop penalty.
 - **Built-in Guardrails:** The reward deducts `-0.01` passively for every executed step, heavily penalizing runaway loops, blind guessing, or destructive action behaviors.
-- **Task-Score Validator Safety:** Final task score is clamped to strict `(0, 1)` to satisfy Phase-2 validator constraints.
+- **Task-Score Validator Safety:** Final task score is projected from `[0,1]` into strict `(0, 1)` to satisfy Phase-2 validator constraints while preserving rank order.
 
 ## 📊 Deterministic Grading (0.0 to 1.0)
 
@@ -52,6 +52,15 @@ Calculated at every frame step, the agent receives a deterministic score out of 
 - **Spurious Precision (35%)** — Did you remove fake boxes without destroying real ones?
 - **Class Match Accuracy (35%)** — For existing valid boxes, did you change to the correct Gold label?
 - **Missing Flag Quality (30%)** — Balanced precision/recall (F1) for `FLAG_MISSING`, penalizing over-flagging.
+
+Task-specific metric weights are used to keep each benchmark VLM-native:
+- `remove_spurious`: prioritize spurious precision
+- `fix_classes`: prioritize class accuracy
+- `find_missing`: prioritize missing-flag quality
+
+Final episode score blends:
+- trajectory improvement (80%)
+- end-state quality (20%)
 
 ## 💻 Spec Compliance & Quick Start
 
@@ -85,6 +94,9 @@ python3 inference.py
 
 The baseline script prints one final score per task and an average across all three tasks.
 Each task score is guaranteed to stay in strict `(0, 1)` for validator compatibility.
+
+For judge-facing baseline numbers, run with a valid model token. If no token is provided,
+the script enters a conservative fallback mode only for local smoke testing.
 
 Example output lines:
 ```text

@@ -19,13 +19,12 @@ MANDATORY
 
 import base64
 import io
-import json
 import os
 import re
 import sys
 import textwrap
 import urllib.request
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from openai import OpenAI
 
@@ -56,6 +55,8 @@ TEMPERATURE = 0.2
 MAX_TOKENS = 1500
 SUCCESS_SCORE_THRESHOLD = 0.1
 SCORE_EPSILON = 0.001
+
+DEFAULT_FALLBACK_SCORE = 0.001
 
 # Raw Image cache
 _raw_image_cache = {}
@@ -349,7 +350,7 @@ def run_task(client: OpenAI, env: AnnotationQAEnvironment, task_name: str) -> fl
     max_steps = MAX_STEPS_PER_TASK.get(task_name, 20)
     rewards: List[float] = []
     steps_taken = 0
-    score = 0.0
+    score = DEFAULT_FALLBACK_SCORE
     success = False
 
     log_start(task=task_name, env=BENCHMARK, model=MODEL_NAME)
@@ -405,15 +406,30 @@ def run_task(client: OpenAI, env: AnnotationQAEnvironment, task_name: str) -> fl
 
 
 def main() -> None:
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY, timeout=600.0)
     env = AnnotationQAEnvironment()
+
+    if not API_KEY:
+        print("[DEBUG] Missing OPENAI_API_KEY/HF_TOKEN. Falling back to minimal score mode.", flush=True)
+        client = None
+    else:
+        try:
+            client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY, timeout=600.0)
+        except Exception as exc:
+            print(f"[DEBUG] OpenAI client initialization failed: {exc}", flush=True)
+            client = None
 
     total_score = 0.0
     for task_name in TASKS:
-        print(f"\n{'='*60}", flush=True)
-        print(f"Running task: {task_name} (VLM: {MODEL_NAME})", flush=True)
-        print(f"{'='*60}", flush=True)
-        score = run_task(client, env, task_name)
+        if client is None:
+            # Preserve required START/END logging shape even without model credentials.
+            log_start(task=task_name, env=BENCHMARK, model=MODEL_NAME)
+            score = clamp_open_score(DEFAULT_FALLBACK_SCORE)
+            log_end(False, 0, score, [score])
+        else:
+            print(f"\n{'='*60}", flush=True)
+            print(f"Running task: {task_name} (VLM: {MODEL_NAME})", flush=True)
+            print(f"{'='*60}", flush=True)
+            score = run_task(client, env, task_name)
         total_score += score
         print(f"Task {task_name} score: {score:.3f}\n", flush=True)
 

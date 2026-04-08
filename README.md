@@ -12,6 +12,8 @@ An **OpenEnv** framework where a Vision-Language Model (VLM) agent reviews and c
 
 This environment simulates a highly critical **real-world task**: human-in-the-loop ML Data QA / Content Cleaning. By having an agent actively audit and correct data labels, it tests a *valid domain* while serving as a pure evaluation bed for multimodal agent alignment.
 
+To preserve benchmark integrity, the agent observation intentionally hides ground-truth scene objects and class labels; only the rendered image with current annotations is exposed.
+
 ## 🎯 The Challenge & Novelty
 
 Traditionally, spatial bounding-box regression tasks test VLMs poorly because model tokenizers destroy contiguous pixel geometry logic. **We solved this.** 
@@ -39,8 +41,9 @@ The environment supports exactly 3 progressively difficult semantic datasets, gu
 The environment strictly enforces proper RL (Reinforcement Learning) paradigms required to actually train agents (e.g. PPO/GRPO setups):
 
 - **Clean Boundaries:** The `reset()` function cleanly initializes a fresh scene ID mapping. Episodes logically finalize the moment `SUBMIT` is invoked or max steps are exhausted.
-- **Dense Fractional Reward:** The reward function provides continuous trajectory signaling. Using `quality_delta = new_quality - old_quality`, the environment computes exact positive fractional improvement arrays (`+0.25`, `+0.34`, etc.) every time an agent makes a correct move, rather than sparse binary end-of-episode integers.
+- **Dense Fractional Reward:** The reward function provides continuous trajectory signaling via `quality_delta = new_quality - old_quality`, with per-step shaping and anti-loop penalty.
 - **Built-in Guardrails:** The reward deducts `-0.01` passively for every executed step, heavily penalizing runaway loops, blind guessing, or destructive action behaviors.
+- **Task-Score Validator Safety:** Final task score is clamped to strict `(0, 1)` to satisfy Phase-2 validator constraints.
 
 ## 📊 Deterministic Grading (0.0 to 1.0)
 
@@ -78,13 +81,30 @@ export MODEL_NAME="Qwen/Qwen3-VL-8B-Instruct"
 python3 inference.py
 ```
 
+### 3. Baseline Score Reporting
+
+The baseline script prints one final score per task and an average across all three tasks.
+Each task score is guaranteed to stay in strict `(0, 1)` for validator compatibility.
+
+Example output lines:
+```text
+Task remove_spurious score: 0.412
+Task fix_classes score: 0.367
+Task find_missing score: 0.291
+Average score across 3 tasks: 0.357
+```
+
 ## 🤖 Pydantic Action Space
 
 | Action | Required Fields | Description |
 |--------|----------------|-------------|
 | `change_class` | `annotation_id`, `new_class` | Correct a miscategorized label |
+| `adjust_bbox` | `annotation_id`, `new_bbox` | Adjust an existing bounding box |
+| `add_annotation` | `new_bbox`, `new_class` | Add a new annotation |
 | `flag_missing` | `missing_class` | Flag a missing target by its class name |
 | `remove_annotation` | `annotation_id` | Delete a completely spurious annotation |
+| `change_attribute` | `annotation_id`, `new_attribute` | Correct attribute text for an annotation |
+| `flag_safety` | `annotation_id` | Flag a safety-policy violating annotation |
 | `submit` | (none) | Finalize audit corrections |
 
 ## 📜 License

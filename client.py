@@ -39,6 +39,10 @@ class AnnotationQAEnv(EnvClient[AnnotationQAAction, AnnotationQAObservation, Ann
             payload["new_bbox"] = action.new_bbox
         if action.new_class is not None:
             payload["new_class"] = action.new_class
+        if action.new_attribute is not None:
+            payload["new_attribute"] = action.new_attribute
+        if action.missing_class is not None:
+            payload["missing_class"] = action.missing_class
         return payload
 
     def _parse_result(self, payload: dict) -> StepResult:

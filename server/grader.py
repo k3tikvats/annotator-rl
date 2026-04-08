@@ -1,16 +1,17 @@
 """
 Grading utilities for the Annotation QA Environment.
 
-Provides deterministic scoring (0.0-1.0) based on:
-- IoU (Intersection over Union) of bounding boxes
-- Class label accuracy
-- Precision (penalizes spurious annotations)
-- Recall (penalizes missed annotations)
+Provides deterministic scoring for semantic annotation auditing based on:
+- Spurious precision (remove fake boxes without deleting real ones)
+- Class-label accuracy (for retained real annotations)
+- Missing-flag quality (precision/recall balanced via F1)
 
-Uses Hungarian matching to optimally pair predicted vs gold annotations.
+Final task score is always clamped to the strict open interval (0, 1)
+to satisfy Phase 2 validator constraints.
 """
 
-from typing import Dict, List, Tuple
+from collections import Counter
+from typing import Dict, List
 
 
 # Phase 2 validator requires task scores to be strictly within (0, 1).
@@ -66,8 +67,6 @@ def compute_annotation_quality(
     - Class Match Accuracy (35%): For existing valid boxes, did you change to the correct Gold label?
     - Missing Flag Recall (30%): Did you successfully use FLAG_MISSING for objects removed from the image?
     """
-    from collections import Counter
-
     if not gold_annotations:
         return 1.0 if not annotations else 0.5
 
@@ -87,34 +86,50 @@ def compute_annotation_quality(
     else:
         class_acc = sum(1 for a in matched if a.get("class_label", "") == gold_map[a["id"]].get("class_label", "")) / len(matched)
         
-    # 3. Missing Object Flag Recall
+    # 3. Missing object flag quality (balanced precision/recall)
     expected_classes = [g.get("class_label", "") for g in gold_annotations]
     present_classes = [a.get("class_label", "") for a in annotations if a["id"] in gold_map and not a.get("class_label", "").startswith("missing_")]
     
-    # Calculate exact missing instances mathematically
+    # Compute which classes are truly missing from current non-missing annotations.
     exp_counts = Counter(expected_classes)
     pres_counts = Counter(present_classes)
     
-    actual_missing_classes = []
+    actual_missing_counts: Counter[str] = Counter()
     for cls, count in exp_counts.items():
-        if count > pres_counts.get(cls, 0):
-            for _ in range(count - pres_counts.get(cls, 0)):
-                actual_missing_classes.append(cls)
-                
-    if not actual_missing_classes:
-        missing_acc = 1.0
-    else:
-        flagged_classes = [a.get("class_label", "").replace("missing_", "", 1) for a in annotations if a.get("class_label", "").startswith("missing_")]
-        flagged_counts = Counter(flagged_classes)
+        missing_n = count - pres_counts.get(cls, 0)
+        if missing_n > 0:
+            actual_missing_counts[cls] = missing_n
 
-        caught = 0
-        for cls in actual_missing_classes:
-            if flagged_counts.get(cls, 0) > 0:
-                caught += 1
-                flagged_counts[cls] -= 1
-        missing_acc = caught / len(actual_missing_classes)
-        
-    quality = 0.35 * class_acc + 0.35 * precision + 0.30 * missing_acc
+    flagged_classes = [
+        a.get("class_label", "").replace("missing_", "", 1)
+        for a in annotations
+        if a.get("class_label", "").startswith("missing_")
+    ]
+    flagged_counts: Counter[str] = Counter(flagged_classes)
+
+    total_actual_missing = sum(actual_missing_counts.values())
+    total_flagged = sum(flagged_counts.values())
+
+    matched = 0
+    for cls, count in actual_missing_counts.items():
+        matched += min(count, flagged_counts.get(cls, 0))
+
+    if total_actual_missing == 0:
+        missing_recall = 1.0
+    else:
+        missing_recall = matched / total_actual_missing
+
+    if total_flagged == 0:
+        missing_precision = 1.0 if total_actual_missing == 0 else 0.0
+    else:
+        missing_precision = matched / total_flagged
+
+    if missing_precision + missing_recall == 0:
+        missing_f1 = 0.0
+    else:
+        missing_f1 = (2.0 * missing_precision * missing_recall) / (missing_precision + missing_recall)
+
+    quality = 0.35 * class_acc + 0.35 * precision + 0.30 * missing_f1
     return max(0.0, min(1.0, quality))
 
 

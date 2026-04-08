@@ -107,7 +107,7 @@ class AnnotationQAObservation(BaseModel):
     )
     scene_objects: List[Dict[str, Any]] = Field(
         default_factory=list,
-        description="Ground-truth object list with positions (visible to agent as scene context)",
+        description="Optional debug field; empty by default to avoid leaking ground-truth labels",
     )
 
     # Current annotations (may contain errors)

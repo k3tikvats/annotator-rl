@@ -22,13 +22,15 @@ except ImportError:
 
 from .environment import AnnotationQAEnvironment
 
-# Import models for type registration
-import sys
-import os
+try:
+    from ..models import AnnotationQAAction, AnnotationQAObservation
+except ImportError:
+    # Runtime fallback for direct module execution (e.g., uvicorn server.app:app)
+    import os
+    import sys
 
-# Add parent to path for model imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from models import AnnotationQAAction, AnnotationQAObservation
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from models import AnnotationQAAction, AnnotationQAObservation
 
 # Create the app
 app = create_app(

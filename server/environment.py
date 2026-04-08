@@ -83,6 +83,9 @@ TASK_CONFIGS = {
     },
 }
 
+# Keep ground-truth scene objects hidden from agents by default.
+EXPOSE_SCENE_OBJECTS = os.getenv("ANNOTATOR_RL_EXPOSE_SCENE_OBJECTS", "false").lower() == "true"
+
 
 class AnnotationQAEnvironment:
     """
@@ -143,7 +146,7 @@ class AnnotationQAEnvironment:
         Args:
             seed: Random seed for reproducibility
             episode_id: Optional episode ID
-            task: Task ID — one of "fix_bboxes", "fix_classes", "batch_audit"
+            task: Task ID — one of "remove_spurious", "fix_classes", "find_missing"
         """
         task_id = task or kwargs.get("task_id", "remove_spurious")
         if task_id not in TASK_CONFIGS:
@@ -248,20 +251,13 @@ class AnnotationQAEnvironment:
             self._corrections_made += 1
             self._state.corrections_made = self._corrections_made
 
-        # Compute reward
-        if action.action_type == "flag_safety" and not error_msg:
-            reward = 0.20
-        elif action.action_type == "change_attribute" and not error_msg:
-            reward = 0.15
-        elif action.action_type == "flag_missing" and not error_msg:
-            reward = 0.25
-        else:
-            reward = compute_step_reward(
-                old_annotations,
-                self._current_annotations,
-                self._gold_annotations,
-                action.action_type,
-            )
+        # Compute reward from quality delta for all action types.
+        reward = compute_step_reward(
+            old_annotations,
+            self._current_annotations,
+            self._gold_annotations,
+            action.action_type,
+        )
 
         # Update quality tracking
         current_quality = compute_annotation_quality(
@@ -430,6 +426,8 @@ class AnnotationQAEnvironment:
     def _handle_flag_missing(self, action: AnnotationQAAction) -> Optional[str]:
         if not action.missing_class:
             return "missing_class is required for flag_missing"
+        if action.missing_class not in ALL_CLASSES:
+            return f"Invalid class '{action.missing_class}'. Valid: {ALL_CLASSES}"
         # Flagging missing class adds a placeholder marker
         self._current_annotations.append({
             "id": self._next_ann_id,
@@ -462,16 +460,15 @@ class AnnotationQAEnvironment:
         error: Optional[str] = None,
     ) -> AnnotationQAObservation:
         """Build an observation from current state."""
-        return AnnotationQAObservation(
-            done=self._done,
-            reward=reward,
-            # Image info from COCO
-            image_url=self._scene_data.get("image_url"),
-            image_width=self._scene_data.get("image_width", 0),
-            image_height=self._scene_data.get("image_height", 0),
-            # Scene info
-            scene_description=self._scene_data.get("scene_description", ""),
-            scene_objects=[
+        image_width = self._scene_data.get("image_width", 0)
+        image_height = self._scene_data.get("image_height", 0)
+        public_scene_description = (
+            f"COCO val2017 image ({image_width}x{image_height}). "
+            "Use visual inspection of the image and current annotations to audit labels."
+        )
+
+        if EXPOSE_SCENE_OBJECTS:
+            scene_objects = [
                 {
                     "id": obj["id"],
                     "class_label": obj["class_label"],
@@ -479,7 +476,20 @@ class AnnotationQAEnvironment:
                     "bbox": obj["bbox"],
                 }
                 for obj in self._scene_data.get("objects", [])
-            ],
+            ]
+        else:
+            scene_objects = []
+
+        return AnnotationQAObservation(
+            done=self._done,
+            reward=reward,
+            # Image info from COCO
+            image_url=self._scene_data.get("image_url"),
+            image_width=image_width,
+            image_height=image_height,
+            # Scene info
+            scene_description=public_scene_description,
+            scene_objects=scene_objects,
             annotations=[
                 Annotation(
                     id=ann["id"],

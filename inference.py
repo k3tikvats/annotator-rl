@@ -51,7 +51,8 @@ MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-VL-72B-Instruct")
 BENCHMARK = "annotation_qa_env"
 TASKS = ["remove_spurious", "fix_classes", "find_missing"]
 MAX_STEPS_PER_TASK = {"remove_spurious": 15, "fix_classes": 20, "find_missing": 30}
-TEMPERATURE = 0.2
+# Keep deterministic decoding for reproducible baseline scoring.
+TEMPERATURE = float(os.getenv("TEMPERATURE", "0.0"))
 MAX_TOKENS = 1500
 SUCCESS_SCORE_THRESHOLD = 0.1
 SCORE_EPSILON = 0.001
@@ -60,6 +61,11 @@ DEFAULT_FALLBACK_SCORE = 0.001
 
 # Raw Image cache
 _raw_image_cache = {}
+
+
+def debug_log(message: str) -> None:
+    """Send diagnostics to stderr so stdout remains protocol-only."""
+    print(message, file=sys.stderr, flush=True)
 
 SYSTEM_PROMPT = textwrap.dedent("""
 You are a highly precise AI visual inspector reviewing annotated datasets.
@@ -151,7 +157,7 @@ def get_base_image(image_url: str, max_dim: int = 768):
         _raw_image_cache[image_url] = img
         return img
     except Exception as e:
-        print(f"[DEBUG] Failed to fetch image {image_url}: {e}", flush=True)
+        debug_log(f"[DEBUG] Failed to fetch image {image_url}: {e}")
         return None
 
 
@@ -228,7 +234,7 @@ def build_user_content(obs: AnnotationQAObservation) -> list:
     content_blocks = []
 
     if obs.image_url:
-        save_debug = (obs.step_count == 0)
+        save_debug = False
         b64 = fetch_annotated_image_as_base64(obs, debug_save=save_debug)
         if b64:
             content_blocks.append({
@@ -321,10 +327,10 @@ def get_vqa_actions(client: OpenAI, obs: AnnotationQAObservation) -> List[Annota
             stream=False,
         )
         response_text = completion.choices[0].message.content or ""
-        print(f"[DEBUG] VLM Output:\n{response_text}\n", flush=True)
+        debug_log(f"[DEBUG] VLM Output:\n{response_text}\n")
         return parse_vqa_actions(response_text)
     except Exception as exc:
-        print(f"[DEBUG] Model request failed: {exc}", flush=True)
+        debug_log(f"[DEBUG] Model request failed: {exc}")
         return []
 
 
@@ -380,7 +386,7 @@ def run_task(client: OpenAI, env: AnnotationQAEnvironment, task_name: str) -> fl
             score = rewards[-1]
 
     except Exception as exc:
-        print(f"[DEBUG] Task {task_name} error: {exc}", flush=True)
+        debug_log(f"[DEBUG] Task {task_name} error: {exc}")
 
     score = clamp_open_score(score)
     success = score >= SUCCESS_SCORE_THRESHOLD
@@ -393,13 +399,13 @@ def main() -> None:
     env = AnnotationQAEnvironment()
 
     if not API_KEY:
-        print("[DEBUG] Missing OPENAI_API_KEY/HF_TOKEN. Falling back to minimal score mode.", flush=True)
+        debug_log("[DEBUG] Missing OPENAI_API_KEY/HF_TOKEN. Falling back to minimal score mode.")
         client = None
     else:
         try:
             client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY, timeout=600.0)
         except Exception as exc:
-            print(f"[DEBUG] OpenAI client initialization failed: {exc}", flush=True)
+            debug_log(f"[DEBUG] OpenAI client initialization failed: {exc}")
             client = None
 
     total_score = 0.0
@@ -410,17 +416,17 @@ def main() -> None:
             score = clamp_open_score(DEFAULT_FALLBACK_SCORE)
             log_end(False, 0, score, [score])
         else:
-            print(f"\n{'='*60}", flush=True)
-            print(f"Running task: {task_name} (VLM: {MODEL_NAME})", flush=True)
-            print(f"{'='*60}", flush=True)
+            debug_log(f"\n{'='*60}")
+            debug_log(f"Running task: {task_name} (VLM: {MODEL_NAME})")
+            debug_log(f"{'='*60}")
             score = run_task(client, env, task_name)
         total_score += score
-        print(f"Task {task_name} score: {score:.3f}\n", flush=True)
+        debug_log(f"Task {task_name} score: {score:.3f}")
 
     avg_score = total_score / len(TASKS)
-    print(f"\n{'='*60}", flush=True)
-    print(f"Average score across {len(TASKS)} tasks: {avg_score:.3f}", flush=True)
-    print(f"{'='*60}", flush=True)
+    debug_log(f"\n{'='*60}")
+    debug_log(f"Average score across {len(TASKS)} tasks: {avg_score:.3f}")
+    debug_log(f"{'='*60}")
 
 if __name__ == "__main__":
     main()

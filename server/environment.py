@@ -83,7 +83,9 @@ TASK_CONFIGS = {
 }
 
 # Keep ground-truth scene objects hidden from agents by default.
-EXPOSE_SCENE_OBJECTS = os.getenv("ANNOTATOR_RL_EXPOSE_SCENE_OBJECTS", "false").lower() == "true"
+# Scene objects can only be exposed when both debug mode and exposure are enabled.
+DEBUG_MODE = os.getenv("ANNOTATOR_RL_DEBUG_MODE", "false").lower() == "true"
+EXPOSE_SCENE_OBJECTS = DEBUG_MODE and os.getenv("ANNOTATOR_RL_EXPOSE_SCENE_OBJECTS", "false").lower() == "true"
 
 
 class AnnotationQAEnvironment:

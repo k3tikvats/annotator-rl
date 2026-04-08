@@ -62,6 +62,8 @@ Final episode score blends:
 - trajectory improvement (80%)
 - end-state quality (20%)
 
+Baseline inference defaults to deterministic decoding (`TEMPERATURE=0.0`) for reproducible runs.
+
 ## 💻 Spec Compliance & Quick Start
 
 This repository is **100% OpenEnv Spec Compliant**. `openenv validate` passes natively, the `openenv.yaml` handles correct routing, and all interface states (Observation, Actions, Reward signals) use natively typed Pydantic structures in `models.py`.
@@ -92,18 +94,24 @@ python3 inference.py
 
 ### 3. Baseline Score Reporting
 
-The baseline script prints one final score per task and an average across all three tasks.
-Each task score is guaranteed to stay in strict `(0, 1)` for validator compatibility.
+The baseline script emits only protocol logs to stdout:
+- `[START] ...`
+- `[STEP] ...` (one per environment step)
+- `[END] ...`
+
+Each task score is reported in the `[END]` line (`score=<value>`) and is guaranteed to stay in strict `(0, 1)` for validator compatibility.
 
 For judge-facing baseline numbers, run with a valid model token. If no token is provided,
 the script enters a conservative fallback mode only for local smoke testing.
 
+Human-readable diagnostics are printed to stderr so parser-facing stdout remains compliant.
+
 Example output lines:
 ```text
-Task remove_spurious score: 0.412
-Task fix_classes score: 0.367
-Task find_missing score: 0.291
-Average score across 3 tasks: 0.357
+[START] task=remove_spurious env=annotation_qa_env model=Qwen/Qwen2.5-VL-72B-Instruct
+[STEP] step=1 action=remove_annotation(id=12) reward=0.18 done=false error=null
+[STEP] step=2 action=submit reward=0.41 done=true error=null
+[END] success=true steps=2 score=0.412 rewards=0.18,0.41
 ```
 
 ## 🤖 Pydantic Action Space

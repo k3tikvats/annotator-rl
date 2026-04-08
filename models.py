@@ -7,9 +7,9 @@ Defines the API contract for the Annotation QA Environment:
 - AnnotationQAState: Episode metadata
 
 The agent reviews intentionally-flawed annotations on real COCO val2017 images
-and must fix bounding boxes, correct class labels, add missing annotations,
-or remove spurious ones. A VLM (Vision-Language Model) is used to visually
-inspect the images.
+and performs semantic QA actions: remove spurious annotations, correct class
+labels, and flag missing objects. A VLM (Vision-Language Model) is used to
+visually inspect the images.
 """
 
 from typing import Any, Dict, List, Literal, Optional
@@ -46,6 +46,7 @@ class AnnotationQAAction(BaseModel):
     - "change_class": requires annotation_id, new_class
     - "add_annotation": requires new_bbox, new_class
     - "remove_annotation": requires annotation_id
+    - "flag_missing": requires missing_class
     - "submit": no extra fields needed (finalizes episode)
     """
     action_type: Literal[
@@ -54,8 +55,6 @@ class AnnotationQAAction(BaseModel):
         "remove_annotation",
         "add_annotation",
         "submit",
-        "flag_safety",
-        "change_attribute",
         "flag_missing",
     ]
     annotation_id: Optional[int] = Field(
@@ -69,9 +68,6 @@ class AnnotationQAAction(BaseModel):
     )
     new_class: Optional[str] = Field(
         None, description="New class label"
-    )
-    new_attribute: Optional[str] = Field(
-        None, description="New attribute description for an object"
     )
     missing_class: Optional[str] = Field(
         None, description="Class of an object that was missing bounding boxes"

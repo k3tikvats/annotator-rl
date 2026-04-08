@@ -6,6 +6,12 @@ Provides deterministic scoring for semantic annotation auditing based on:
 - Class-label accuracy (for retained real annotations)
 - Missing-flag quality (precision/recall balanced via F1)
 
+Weights are task-aware so each benchmark focuses on what VLMs can
+reliably perform:
+- remove_spurious -> prioritize spurious detection quality
+- fix_classes -> prioritize class correction quality
+- find_missing -> prioritize missing-object flag quality
+
 Final task score is always clamped to the strict open interval (0, 1)
 to satisfy Phase 2 validator constraints.
 """
@@ -18,9 +24,23 @@ from typing import Dict, List
 SCORE_EPSILON = 0.001
 
 
+TASK_METRIC_WEIGHTS = {
+    "remove_spurious": {"precision": 0.70, "class_acc": 0.20, "missing_f1": 0.10},
+    "fix_classes": {"precision": 0.30, "class_acc": 0.60, "missing_f1": 0.10},
+    "find_missing": {"precision": 0.20, "class_acc": 0.20, "missing_f1": 0.60},
+    "default": {"precision": 0.35, "class_acc": 0.35, "missing_f1": 0.30},
+}
+
+
 def _to_open_unit_interval(value: float) -> float:
     """Clamp any score to the strict open interval (0, 1)."""
     return min(1.0 - SCORE_EPSILON, max(SCORE_EPSILON, value))
+
+
+def _weights_for_task(task_id: str | None) -> Dict[str, float]:
+    if task_id is None:
+        return TASK_METRIC_WEIGHTS["default"]
+    return TASK_METRIC_WEIGHTS.get(task_id, TASK_METRIC_WEIGHTS["default"])
 
 
 def compute_iou(box_a: List[float], box_b: List[float]) -> float:
@@ -59,6 +79,7 @@ def compute_iou(box_a: List[float], box_b: List[float]) -> float:
 def compute_annotation_quality(
     annotations: List[Dict],
     gold_annotations: List[Dict],
+    task_id: str | None = None,
 ) -> float:
     """
     Compute specific Semantic VLM visual QA testing metrics (0.0-1.0).
@@ -129,7 +150,12 @@ def compute_annotation_quality(
     else:
         missing_f1 = (2.0 * missing_precision * missing_recall) / (missing_precision + missing_recall)
 
-    quality = 0.35 * class_acc + 0.35 * precision + 0.30 * missing_f1
+    weights = _weights_for_task(task_id)
+    quality = (
+        weights["class_acc"] * class_acc
+        + weights["precision"] * precision
+        + weights["missing_f1"] * missing_f1
+    )
     return max(0.0, min(1.0, quality))
 
 
@@ -137,12 +163,13 @@ def grade_episode(
     initial_annotations: List[Dict],
     final_annotations: List[Dict],
     gold_annotations: List[Dict],
+    task_id: str | None = None,
 ) -> float:
     """
     Compute the episode grade (0.0–1.0).
     """
-    initial_quality = compute_annotation_quality(initial_annotations, gold_annotations)
-    final_quality = compute_annotation_quality(final_annotations, gold_annotations)
+    initial_quality = compute_annotation_quality(initial_annotations, gold_annotations, task_id=task_id)
+    final_quality = compute_annotation_quality(final_annotations, gold_annotations, task_id=task_id)
 
     max_improvement = 1.0 - initial_quality
     if max_improvement < 0.01:
@@ -159,15 +186,14 @@ def compute_step_reward(
     new_annotations: List[Dict],
     gold_annotations: List[Dict],
     action_type: str,
+    task_id: str | None = None,
 ) -> float:
     """
     Compute dense per-step reward based on quality delta.
     """
-    old_quality = compute_annotation_quality(old_annotations, gold_annotations)
-    new_quality = compute_annotation_quality(new_annotations, gold_annotations)
+    old_quality = compute_annotation_quality(old_annotations, gold_annotations, task_id=task_id)
+    new_quality = compute_annotation_quality(new_annotations, gold_annotations, task_id=task_id)
     delta = new_quality - old_quality
     reward = delta * 2.0  # quality improvement → reward
     reward -= 0.01  # step penalty
-    if action_type == "submit":
-        reward += 0.05
     return round(reward, 4)

@@ -7,8 +7,8 @@ Implements the OpenEnv 3-method interface:
 - state → State
 
 The agent reviews intentionally-flawed annotations on real COCO val2017 images
-and must correct bounding boxes, fix class labels, add missing annotations,
-or remove spurious ones. Dense reward is provided at every step.
+and performs semantic QA actions: remove spurious boxes, fix class labels,
+and flag missing objects. Dense reward is provided at every step.
 """
 
 import copy
@@ -55,7 +55,7 @@ TASK_CONFIGS = {
     "remove_spurious": {
         "description": (
             "Spurious Box Removal Task. Fake bounding boxes have been randomly drawn. "
-            "Identify and remove any annotations that do not strictly bound a real object."
+            "Identify and remove annotations that do not correspond to real objects."
         ),
         "difficulty": "spurious",
         "max_steps": 15,
@@ -63,9 +63,8 @@ TASK_CONFIGS = {
     },
     "fix_classes": {
         "description": (
-            "Class Identification Task. Some bounding boxes have incorrect class labels, "
-            "and some are completely fake (spurious). Fix class labels using "
-            "CHANGE_CLASS and REMOVE spurious labels."
+            "Class Identification Task. Some annotations have incorrect class labels, "
+            "and some are fake (spurious). Use change_class and remove_annotation."
         ),
         "difficulty": "classes",
         "max_steps": 20,
@@ -75,7 +74,7 @@ TASK_CONFIGS = {
         "description": (
             "Contextual Object Detection Task. Bounding boxes for key objects have been "
             "entirely removed from the image. You must meticulously identify what object classes "
-            "are completely missing from the drawn bounding boxes and flag them."
+            "are completely missing from the current annotations and flag them with flag_missing."
         ),
         "difficulty": "missing",
         "max_steps": 30,
@@ -181,8 +180,14 @@ class AnnotationQAEnvironment:
 
         # Compute initial quality
         initial_quality = compute_annotation_quality(
-            self._initial_annotations, self._gold_annotations
+            self._initial_annotations, self._gold_annotations, task_id=task_id
         )
+
+        action_hints = {
+            "remove_spurious": "Use remove_annotation for fake boxes. No bbox editing is required.",
+            "fix_classes": "Use change_class for wrong labels and remove_annotation for fake boxes.",
+            "find_missing": "Use flag_missing for each missing class and remove_annotation only for obvious fake boxes.",
+        }
 
         self._state = AnnotationQAState(
             episode_id=episode_id or str(uuid4()),
@@ -199,9 +204,9 @@ class AnnotationQAEnvironment:
             message=(
                 f"Review the annotations for this COCO image. "
                 f"There are {len(self._current_annotations)} annotations. "
-                f"Some may have incorrect bounding boxes, wrong class labels, "
-                f"or be entirely spurious. Some objects may be missing annotations. "
-                f"You have {self._task_config['max_steps']} steps to fix them."
+                f"{self._task_config['description']} "
+                f"{action_hints.get(task_id, '')} "
+                f"You have {self._task_config['max_steps']} steps."
             ),
         )
 
@@ -236,10 +241,6 @@ class AnnotationQAEnvironment:
                 error_msg = self._handle_remove_annotation(action)
             elif action.action_type == "submit":
                 return self._handle_submit()
-            elif action.action_type == "flag_safety":
-                error_msg = self._handle_flag_safety(action)
-            elif action.action_type == "change_attribute":
-                error_msg = self._handle_change_attribute(action)
             elif action.action_type == "flag_missing":
                 error_msg = self._handle_flag_missing(action)
             else:
@@ -257,11 +258,12 @@ class AnnotationQAEnvironment:
             self._current_annotations,
             self._gold_annotations,
             action.action_type,
+            task_id=self._state.task_id,
         )
 
         # Update quality tracking
         current_quality = compute_annotation_quality(
-            self._current_annotations, self._gold_annotations
+            self._current_annotations, self._gold_annotations, task_id=self._state.task_id
         )
         self._state.current_quality = round(current_quality, 4)
 
@@ -272,6 +274,7 @@ class AnnotationQAEnvironment:
                 self._initial_annotations,
                 self._current_annotations,
                 self._gold_annotations,
+                task_id=self._state.task_id,
             )
             return self._build_observation(
                 reward=final_score,
@@ -391,6 +394,7 @@ class AnnotationQAEnvironment:
             self._initial_annotations,
             self._current_annotations,
             self._gold_annotations,
+            task_id=self._state.task_id,
         )
 
         return self._build_observation(
@@ -403,25 +407,6 @@ class AnnotationQAEnvironment:
                 f"{self._state.step_count} steps."
             ),
         )
-
-    def _handle_flag_safety(self, action: AnnotationQAAction) -> Optional[str]:
-        if action.annotation_id is None:
-            return "annotation_id is required for flag_safety"
-        ann = self._find_annotation(action.annotation_id)
-        if ann is None: return "Annotation not found"
-        # We don't change state, just append tracking metadata for the grader
-        ann["safety_flagged"] = True
-        return None
-
-    def _handle_change_attribute(self, action: AnnotationQAAction) -> Optional[str]:
-        if action.annotation_id is None:
-            return "annotation_id is required for change_attribute"
-        if not action.new_attribute:
-            return "new_attribute is required"
-        ann = self._find_annotation(action.annotation_id)
-        if ann is None: return "Annotation not found"
-        ann["class_label"] = action.new_attribute
-        return None
 
     def _handle_flag_missing(self, action: AnnotationQAAction) -> Optional[str]:
         if not action.missing_class:

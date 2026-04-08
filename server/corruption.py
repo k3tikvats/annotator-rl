@@ -5,9 +5,9 @@ Takes gold-standard COCO annotations and systematically corrupts them to create
 data with known errors. The corruption is deterministic given a seed.
 
 Corruption types by difficulty:
-- Task 1 (Easy): Obvious bbox errors — expand, shift, delete, add spurious
-- Task 2 (Medium): bbox + class errors — similar class confusion, boundary errors
-- Task 3 (Hard): Cross-image inconsistencies + subtle errors
+- Task 1 (Easy): spurious annotations are injected
+- Task 2 (Medium): class confusions + a small number of spurious annotations
+- Task 3 (Hard): true objects are removed; agent must flag missing classes
 """
 
 import copy
@@ -160,9 +160,9 @@ def corrupt_annotations(
     Corrupt gold annotations conceptually (no geometry shifts) based on difficulty level.
 
     Difficulties:
-    - "spurious": Adds 2-4 entirely fake boxes.
-    - "classes": Swaps 30% of class labels (similar and different) + adds some spurious.
-    - "missing": Deletes 15-20% of annotations completely. VLM must FLAG_MISSING.
+    - "spurious": Adds 2-3 entirely fake boxes.
+    - "classes": Swaps ~25% of class labels (mostly similar confusions) + 1-2 spurious.
+    - "missing": Deletes 25-35% of annotations completely. VLM must FLAG_MISSING.
     """
     rng = random.Random(seed)
     corrupted = copy.deepcopy(gold_annotations)
@@ -171,7 +171,7 @@ def corrupt_annotations(
     if difficulty == "spurious":
         # Task 1: Spurious removal only
         existing_bboxes = [a["bbox"] for a in corrupted]
-        n_spurious = rng.randint(2, 4)
+        n_spurious = rng.randint(2, 3)
         next_id = max((a["id"] for a in corrupted), default=0) + 1
         for i in range(n_spurious):
             spur = generate_spurious_annotation(existing_bboxes, rng)
@@ -182,14 +182,18 @@ def corrupt_annotations(
 
     elif difficulty == "classes":
         # Task 2: Fix Classes
-        corruption_rate = 0.30
+        corruption_rate = 0.25
         n_corrupt = max(2, int(len(corrupted) * corruption_rate))
         indices = list(range(len(corrupted)))
         rng.shuffle(indices)
         corrupt_indices = indices[:n_corrupt]
 
         for idx in corrupt_indices:
-            action = rng.choice(["wrong_similar_class", "wrong_different_class"])
+            action = rng.choices(
+                ["wrong_similar_class", "wrong_different_class"],
+                weights=[0.8, 0.2],
+                k=1,
+            )[0]
             ann = corrupted[idx]
             old_cls = ann["class_label"]
 
@@ -222,8 +226,8 @@ def corrupt_annotations(
 
     elif difficulty == "missing":
         # Task 3: Missing items evaluation
-        # Randomly delete 15-20% of annotations completely
-        delete_rate = rng.uniform(0.15, 0.20)
+        # Randomly delete 25-35% of annotations completely.
+        delete_rate = rng.uniform(0.25, 0.35)
         n_delete = max(1, int(len(corrupted) * delete_rate))
         indices = list(range(len(corrupted)))
         rng.shuffle(indices)
@@ -235,17 +239,5 @@ def corrupt_annotations(
             corrupted[idx] = None
         
         corrupted = [a for a in corrupted if a is not None]
-
-        # Also add a little bit of class confusion
-        corruption_rate = 0.20
-        n_corrupt = max(1, int(len(corrupted) * corruption_rate))
-        remaining_indices = list(range(len(corrupted)))
-        rng.shuffle(remaining_indices)
-        for idx in remaining_indices[:n_corrupt]:
-            ann = corrupted[idx]
-            old_cls = ann["class_label"]
-            candidates = [c for c in ALL_CLASSES if c != old_cls]
-            ann["class_label"] = rng.choice(candidates)
-            log.append(f"Changed class: {old_cls} -> {ann['class_label']}")
 
     return corrupted, log

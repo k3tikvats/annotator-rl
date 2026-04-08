@@ -47,11 +47,11 @@ The environment strictly enforces proper RL (Reinforcement Learning) paradigms r
 
 ## 📊 Deterministic Grading (0.0 to 1.0)
 
-Calculated at every frame step, the Agent receives an un-gameable score out of `1.0` computed from a pure boolean hashmap (completely deterministic and perfectly reproducible):
+Calculated at every frame step, the agent receives a deterministic score out of `1.0` based on semantic QA metrics:
 
 - **Spurious Precision (35%)** — Did you remove fake boxes without destroying real ones?
 - **Class Match Accuracy (35%)** — For existing valid boxes, did you change to the correct Gold label?
-- **Missing Flag Recall (30%)** — Did you successfully use `FLAG_MISSING` for objects stripped from the image?
+- **Missing Flag Quality (30%)** — Balanced precision/recall (F1) for `FLAG_MISSING`, penalizing over-flagging.
 
 ## 💻 Spec Compliance & Quick Start
 
@@ -103,8 +103,6 @@ Average score across 3 tasks: 0.357
 | `add_annotation` | `new_bbox`, `new_class` | Add a new annotation |
 | `flag_missing` | `missing_class` | Flag a missing target by its class name |
 | `remove_annotation` | `annotation_id` | Delete a completely spurious annotation |
-| `change_attribute` | `annotation_id`, `new_attribute` | Correct attribute text for an annotation |
-| `flag_safety` | `annotation_id` | Flag a safety-policy violating annotation |
 | `submit` | (none) | Finalize audit corrections |
 
 ## 📜 License

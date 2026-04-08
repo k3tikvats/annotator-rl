@@ -20,7 +20,7 @@ class AnnotationQAEnv(EnvClient[AnnotationQAAction, AnnotationQAObservation, Ann
 
     Example:
         >>> with AnnotationQAEnv(base_url="http://localhost:8000").sync() as env:
-        ...     result = env.reset(task="fix_bboxes")
+        ...     result = env.reset(task="remove_spurious")
         ...     print(result.observation.annotations)
         ...     result = env.step(AnnotationQAAction(
         ...         action_type="adjust_bbox",
@@ -39,8 +39,6 @@ class AnnotationQAEnv(EnvClient[AnnotationQAAction, AnnotationQAObservation, Ann
             payload["new_bbox"] = action.new_bbox
         if action.new_class is not None:
             payload["new_class"] = action.new_class
-        if action.new_attribute is not None:
-            payload["new_attribute"] = action.new_attribute
         if action.missing_class is not None:
             payload["missing_class"] = action.missing_class
         return payload

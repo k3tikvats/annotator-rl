@@ -1,0 +1,2 @@
+[console_scripts]
+server = annotation_qa_env.server.app:main

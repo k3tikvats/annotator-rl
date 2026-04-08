@@ -43,13 +43,15 @@ except ImportError:
 # ──────────────────────────────────────────────
 
 LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
-HF_TOKEN = os.getenv("HF_TOKEN")
+
+# We test OPENAI_API_KEY natively per spec requirement, falling back to HF_TOKEN for Serverless Inference.
+API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("HF_TOKEN")
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-VL-72B-Instruct")
 
 BENCHMARK = "annotation_qa_env"
-TASKS = ["fix_bboxes", "fix_classes", "batch_audit", "easy_safety", "medium_attributes", "hard_missing"]
-MAX_STEPS_PER_TASK = {"fix_bboxes": 15, "fix_classes": 20, "batch_audit": 30, "easy_safety": 15, "medium_attributes": 20, "hard_missing": 30}
+TASKS = ["remove_spurious", "fix_classes", "find_missing"]
+MAX_STEPS_PER_TASK = {"remove_spurious": 15, "fix_classes": 20, "find_missing": 30}
 TEMPERATURE = 0.2
 MAX_TOKENS = 1500
 SUCCESS_SCORE_THRESHOLD = 0.1
@@ -233,7 +235,7 @@ def build_user_content(obs: AnnotationQAObservation) -> list:
     inventory = [f"ID {a.id}: {a.class_label}" for a in obs.annotations]
 
     text = f"""Please analyze this image. The bounding boxes are clearly drawn with their current labels.
-Available valid COCO classes: {', '.join(obs.available_classes[:20])}... ({len(obs.available_classes)} total).
+All valid standard COCO Classes are supported.
 
 Here is the inventory of boxes on screen you MUST review:
 { chr(10).join(inventory) }
@@ -395,7 +397,7 @@ def run_task(client: OpenAI, env: AnnotationQAEnvironment, task_name: str) -> fl
 
 
 def main() -> None:
-    client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
+    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY, timeout=600.0)
     env = AnnotationQAEnvironment()
 
     total_score = 0.0

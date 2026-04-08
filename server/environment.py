@@ -52,65 +52,34 @@ from .grader import (
 # ──────────────────────────────────────────────
 
 TASK_CONFIGS = {
-    "fix_bboxes": {
+    "remove_spurious": {
         "description": (
-            "Fix bounding box errors in the annotations. Some boxes are too large, "
-            "shifted to the wrong position, too small, or completely missing. "
-            "There may also be spurious annotations that don't correspond to any object. "
-            "Adjust bounding boxes, remove spurious annotations, and add any missing ones. "
-            "You can see the actual image — use visual inspection to judge correctness."
+            "Spurious Box Removal Task. Fake bounding boxes have been randomly drawn. "
+            "Identify and remove any annotations that do not strictly bound a real object."
         ),
-        "difficulty": "easy",
+        "difficulty": "spurious",
         "max_steps": 15,
-        "data_file": "task1_fix_bboxes/samples.json",
+        "data_file": "task1_remove_spurious/samples.json",
     },
     "fix_classes": {
         "description": (
-            "Fix both bounding box AND class label errors. Some annotations have the "
-            "wrong class label (e.g., a 'car' labeled as 'truck', or a 'dog' labeled as 'cat'). "
-            "Additionally, some bounding boxes are wrong. Fix class labels, adjust bounding "
-            "boxes, remove spurious annotations, and add missing ones. "
-            "You can see the actual image — use visual inspection to judge correctness."
+            "Class Identification Task. Some bounding boxes have incorrect class labels, "
+            "and some are completely fake (spurious). Fix class labels using "
+            "CHANGE_CLASS and REMOVE spurious labels."
         ),
-        "difficulty": "medium",
+        "difficulty": "classes",
         "max_steps": 20,
         "data_file": "task2_fix_classes/samples.json",
     },
-    "batch_audit": {
+    "find_missing": {
         "description": (
-            "Perform a batch consistency audit across multiple scenes. Fix annotation "
-            "errors including subtle bounding box shifts, similar-class confusions "
-            "(car vs truck, dog vs cat), missing annotations, and spurious annotations. "
-            "Errors are more subtle than in previous tasks. "
-            "You can see the actual image — use visual inspection to judge correctness."
+            "Contextual Object Detection Task. Bounding boxes for key objects have been "
+            "entirely removed from the image. You must meticulously identify what object classes "
+            "are completely missing from the drawn bounding boxes and flag them."
         ),
-        "difficulty": "hard",
+        "difficulty": "missing",
         "max_steps": 30,
-        "data_file": "task3_batch_audit/samples.json",
-    },
-    "easy_safety": {
-        "description": (
-            "Safety & Policy Violation. Flag any objects that violate the 'No humans allowed' policy."
-        ),
-        "difficulty": "easy_safety",
-        "max_steps": 15,
-        "data_file": "task1_fix_bboxes/samples.json",
-    },
-    "medium_attributes": {
-        "description": (
-            "Attribute & Caption Audit. Boxes may have wrong color prefixes (e.g. 'red car' instead of 'blue car'). Correct wrong attributes."
-        ),
-        "difficulty": "medium_attributes",
-        "max_steps": 20,
-        "data_file": "task2_fix_classes/samples.json",
-    },
-    "hard_missing": {
-        "description": (
-            "Missing Contextual Annotations. Substantial bounding boxes have been entirely stripped from the image. Identify the missing objects."
-        ),
-        "difficulty": "hard_missing",
-        "max_steps": 30,
-        "data_file": "task3_batch_audit/samples.json",
+        "data_file": "task3_find_missing/samples.json",
     },
 }
 
@@ -176,9 +145,9 @@ class AnnotationQAEnvironment:
             episode_id: Optional episode ID
             task: Task ID — one of "fix_bboxes", "fix_classes", "batch_audit"
         """
-        task_id = task or kwargs.get("task_id", "fix_bboxes")
+        task_id = task or kwargs.get("task_id", "remove_spurious")
         if task_id not in TASK_CONFIGS:
-            task_id = "fix_bboxes"
+            task_id = "remove_spurious"
 
         self._task_config = TASK_CONFIGS[task_id]
         data = self._load_task_data(task_id)
@@ -186,14 +155,8 @@ class AnnotationQAEnvironment:
         # Select a random sample
         rng = random.Random(seed) if seed is not None else random.Random()
 
-        if "batch_audit" in self._task_config["data_file"]:
-            # For data using the batch schema, pick a random batch and use its first scene
-            batch = rng.choice(data)
-            scene = batch["scenes"][0]
-            sample_seed = scene.get("seed", rng.randint(0, 99999))
-        else:
-            scene = rng.choice(data)
-            sample_seed = scene.get("seed", rng.randint(0, 99999))
+        scene = rng.choice(data)
+        sample_seed = scene.get("seed", rng.randint(0, 99999))
 
         # Store gold annotations
         self._gold_annotations = copy.deepcopy(scene["gold_annotations"])

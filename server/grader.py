@@ -46,103 +46,66 @@ def compute_iou(box_a: List[float], box_b: List[float]) -> float:
     return inter_area / union_area
 
 
-def hungarian_match(
-    pred_annotations: List[Dict],
-    gold_annotations: List[Dict],
-    iou_threshold: float = 0.3,
-) -> List[Tuple[int, int, float]]:
-    """
-    Match predicted annotations to gold annotations using greedy best-IoU matching.
-    Returns list of (pred_idx, gold_idx, iou) tuples.
-
-    Uses a simple greedy approach (good enough for our scale) instead of
-    scipy.optimize.linear_sum_assignment to avoid the scipy dependency.
-    """
-    if not pred_annotations or not gold_annotations:
-        return []
-
-    # Compute IoU matrix
-    n_pred = len(pred_annotations)
-    n_gold = len(gold_annotations)
-    iou_matrix = []
-    for i in range(n_pred):
-        row = []
-        for j in range(n_gold):
-            iou = compute_iou(pred_annotations[i]["bbox"], gold_annotations[j]["bbox"])
-            row.append(iou)
-        iou_matrix.append(row)
-
-    # Greedy matching: pick highest IoU pair iteratively
-    matches = []
-    used_pred = set()
-    used_gold = set()
-
-    # Flatten and sort all (pred_idx, gold_idx, iou) by IoU descending
-    all_pairs = []
-    for i in range(n_pred):
-        for j in range(n_gold):
-            if iou_matrix[i][j] >= iou_threshold:
-                all_pairs.append((i, j, iou_matrix[i][j]))
-
-    all_pairs.sort(key=lambda x: x[2], reverse=True)
-
-    for pred_idx, gold_idx, iou in all_pairs:
-        if pred_idx not in used_pred and gold_idx not in used_gold:
-            matches.append((pred_idx, gold_idx, iou))
-            used_pred.add(pred_idx)
-            used_gold.add(gold_idx)
-
-    return matches
-
-
 def compute_annotation_quality(
     annotations: List[Dict],
     gold_annotations: List[Dict],
-    iou_threshold: float = 0.3,
 ) -> float:
     """
-    Compute overall annotation quality score (0.0–1.0).
-
-    Combines:
-    - Mean IoU of matched annotations (40%)
-    - Class label accuracy on matched annotations (30%)
-    - Precision: matched / total_predicted (15%)
-    - Recall: matched / total_gold (15%)
+    Compute specific Semantic VLM visual QA testing metrics (0.0-1.0).
+    Graded on:
+    - Spurious Precision (35%): Did you remove fake boxes without destroying real ones?
+    - Class Match Accuracy (35%): For existing valid boxes, did you change to the correct Gold label?
+    - Missing Flag Recall (30%): Did you successfully use FLAG_MISSING for objects removed from the image?
     """
+    from collections import Counter
+
     if not gold_annotations:
-        # No gold → quality is 1.0 if no predictions, else penalized
         return 1.0 if not annotations else 0.5
 
-    matches = hungarian_match(annotations, gold_annotations, iou_threshold)
+    # 1. Spurious Precision
+    gold_map = {a["id"]: a for a in gold_annotations}
+    predictions_valid = [a for a in annotations if not a.get("class_label", "").startswith("missing_")]
 
-    n_pred = len(annotations)
-    n_gold = len(gold_annotations)
-    n_matched = len(matches)
-
-    # Mean IoU of matched pairs
-    if n_matched > 0:
-        mean_iou = sum(iou for _, _, iou in matches) / n_matched
+    if not predictions_valid:
+        precision = 0.0
     else:
-        mean_iou = 0.0
-
-    # Class accuracy on matched pairs
-    if n_matched > 0:
-        class_correct = sum(
-            1
-            for pred_idx, gold_idx, _ in matches
-            if annotations[pred_idx].get("class_label", "")
-            == gold_annotations[gold_idx].get("class_label", "")
-        )
-        class_acc = class_correct / n_matched
-    else:
+        precision = sum(1 for a in predictions_valid if a["id"] in gold_map) / len(predictions_valid)
+        
+    # 2. Class Match Accuracy for valid boxes
+    matched = [a for a in predictions_valid if a["id"] in gold_map]
+    if not matched:
         class_acc = 0.0
+    else:
+        class_acc = sum(1 for a in matched if a.get("class_label", "") == gold_map[a["id"]].get("class_label", "")) / len(matched)
+        
+    # 3. Missing Object Flag Recall
+    expected_classes = [g.get("class_label", "") for g in gold_annotations]
+    present_classes = [a.get("class_label", "") for a in annotations if a["id"] in gold_map and not a.get("class_label", "").startswith("missing_")]
+    
+    # Calculate exact missing instances mathematically
+    exp_counts = Counter(expected_classes)
+    pres_counts = Counter(present_classes)
+    
+    actual_missing_classes = []
+    for cls, count in exp_counts.items():
+        if count > pres_counts.get(cls, 0):
+            for _ in range(count - pres_counts.get(cls, 0)):
+                actual_missing_classes.append(cls)
+                
+    if not actual_missing_classes:
+        missing_acc = 1.0
+    else:
+        flagged_classes = [a.get("class_label", "").replace("missing_", "", 1) for a in annotations if a.get("class_label", "").startswith("missing_")]
+        flagged_counts = Counter(flagged_classes)
 
-    # Precision and recall
-    precision = n_matched / n_pred if n_pred > 0 else 0.0
-    recall = n_matched / n_gold if n_gold > 0 else 0.0
-
-    # Weighted composite
-    quality = 0.40 * mean_iou + 0.30 * class_acc + 0.15 * precision + 0.15 * recall
+        caught = 0
+        for cls in actual_missing_classes:
+            if flagged_counts.get(cls, 0) > 0:
+                caught += 1
+                flagged_counts[cls] -= 1
+        missing_acc = caught / len(actual_missing_classes)
+        
+    quality = 0.35 * class_acc + 0.35 * precision + 0.30 * missing_acc
     return max(0.0, min(1.0, quality))
 
 
@@ -153,21 +116,16 @@ def grade_episode(
 ) -> float:
     """
     Compute the episode grade (0.0–1.0).
-
-    Score = improvement in annotation quality normalized by maximum possible
-    improvement.
     """
     initial_quality = compute_annotation_quality(initial_annotations, gold_annotations)
     final_quality = compute_annotation_quality(final_annotations, gold_annotations)
 
     max_improvement = 1.0 - initial_quality
     if max_improvement < 0.01:
-        # Already near-perfect, give full credit if not degraded
         return 1.0 if final_quality >= initial_quality - 0.01 else 0.5
 
     improvement = final_quality - initial_quality
     score = improvement / max_improvement
-
     return max(0.0, min(1.0, score))
 
 
@@ -182,17 +140,9 @@ def compute_step_reward(
     """
     old_quality = compute_annotation_quality(old_annotations, gold_annotations)
     new_quality = compute_annotation_quality(new_annotations, gold_annotations)
-
     delta = new_quality - old_quality
-
-    # Scale delta to a reasonable reward range
     reward = delta * 2.0  # quality improvement → reward
-
-    # Small step penalty to encourage efficiency
-    reward -= 0.01
-
-    # Bonus for submit action (completion)
+    reward -= 0.01  # step penalty
     if action_type == "submit":
-        reward += 0.05  # small bonus for actually submitting
-
+        reward += 0.05
     return round(reward, 4)

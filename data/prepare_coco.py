@@ -293,26 +293,26 @@ def generate_all_tasks(output_dir: str) -> None:
     task2_images = selected[250:400]
     task3_images = selected[400:500]
 
-    # Task 1: Fix Bounding Boxes (Easy)
-    print("Step 3a: Generating Task 1 (fix_bboxes) — 250 images...")
+    # Task 1: Spurious Removal (Easy)
+    print("Step 3a: Generating Task 1 (remove_spurious) — 250 images...")
     task1_data = []
     for idx, (img_id, anns) in enumerate(task1_images):
         sample = convert_image_to_sample(
             img_id, anns, img_info_map,
-            scene_id=f"fix_bboxes_{idx:03d}",
+            scene_id=f"remove_spurious_{idx:03d}",
         )
-        sample["task_id"] = "fix_bboxes"
-        sample["difficulty"] = "easy"
+        sample["task_id"] = "remove_spurious"
+        sample["difficulty"] = "spurious"
         sample["seed"] = 1000 + idx
         task1_data.append(sample)
 
-    task1_dir = output_path / "task1_fix_bboxes"
+    task1_dir = output_path / "task1_remove_spurious"
     task1_dir.mkdir(parents=True, exist_ok=True)
     with open(task1_dir / "samples.json", "w") as f:
         json.dump(task1_data, f, indent=2)
     print(f"  → {len(task1_data)} samples written to {task1_dir}")
 
-    # Task 2: Fix Classes + Bboxes (Medium)
+    # Task 2: Fix Classes (Medium)
     print("Step 3b: Generating Task 2 (fix_classes) — 150 images...")
     task2_data = []
     for idx, (img_id, anns) in enumerate(task2_images):
@@ -321,7 +321,7 @@ def generate_all_tasks(output_dir: str) -> None:
             scene_id=f"fix_classes_{idx:03d}",
         )
         sample["task_id"] = "fix_classes"
-        sample["difficulty"] = "medium"
+        sample["difficulty"] = "classes"
         sample["seed"] = 2000 + idx
         task2_data.append(sample)
 
@@ -331,40 +331,31 @@ def generate_all_tasks(output_dir: str) -> None:
         json.dump(task2_data, f, indent=2)
     print(f"  → {len(task2_data)} samples written to {task2_dir}")
 
-    # Task 3: Batch Audit (Hard) — 20 batches of 5
-    print("Step 3c: Generating Task 3 (batch_audit) — 100 images in 20 batches...")
+    # Task 3: Find Missing (Hard)
+    print("Step 3c: Generating Task 3 (find_missing) — 100 images...")
     task3_data = []
-    for batch_idx in range(20):
-        batch_images = task3_images[batch_idx * 5 : (batch_idx + 1) * 5]
-        batch_scenes = []
-        for scene_idx, (img_id, anns) in enumerate(batch_images):
-            sample = convert_image_to_sample(
-                img_id, anns, img_info_map,
-                scene_id=f"batch_audit_b{batch_idx:02d}_s{scene_idx:02d}",
-            )
-            sample["batch_id"] = batch_idx
-            sample["task_id"] = "batch_audit"
-            sample["difficulty"] = "hard"
-            sample["seed"] = 3000 + batch_idx * 100 + scene_idx
-            batch_scenes.append(sample)
+    for idx, (img_id, anns) in enumerate(task3_images):
+        sample = convert_image_to_sample(
+            img_id, anns, img_info_map,
+            scene_id=f"find_missing_{idx:03d}",
+        )
+        sample["task_id"] = "find_missing"
+        sample["difficulty"] = "missing"
+        sample["seed"] = 3000 + idx
+        task3_data.append(sample)
 
-        task3_data.append({
-            "batch_id": batch_idx,
-            "scenes": batch_scenes,
-        })
-
-    task3_dir = output_path / "task3_batch_audit"
+    task3_dir = output_path / "task3_find_missing"
     task3_dir.mkdir(parents=True, exist_ok=True)
     with open(task3_dir / "samples.json", "w") as f:
         json.dump(task3_data, f, indent=2)
-    print(f"  → {len(task3_data)} batches written to {task3_dir}")
+    print(f"  → {len(task3_data)} samples written to {task3_dir}")
 
     print()
     print("=== Done! ===")
 
     # Report sizes
     total_size = 0
-    for task_dir_name in ["task1_fix_bboxes", "task2_fix_classes", "task3_batch_audit"]:
+    for task_dir_name in ["task1_remove_spurious", "task2_fix_classes", "task3_find_missing"]:
         fpath = output_path / task_dir_name / "samples.json"
         size = fpath.stat().st_size
         total_size += size

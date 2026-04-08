@@ -123,43 +123,6 @@ SIMILAR_CLASSES: Dict[str, List[str]] = {
 }
 
 
-def _clamp(val: float, lo: float = 0.0, hi: float = 1.0) -> float:
-    return max(lo, min(hi, val))
-
-
-def _clamp_bbox(bbox: List[float]) -> List[float]:
-    """Ensure bbox stays within [0, 1] image bounds."""
-    x, y, w, h = bbox
-    x = _clamp(x)
-    y = _clamp(y)
-    w = _clamp(w, 0.02, 1.0 - x)
-    h = _clamp(h, 0.02, 1.0 - y)
-    return [round(x, 4), round(y, 4), round(w, 4), round(h, 4)]
-
-
-def expand_bbox(bbox: List[float], factor: float) -> List[float]:
-    """Expand a bbox by a factor (e.g., 1.5 = 50% larger)."""
-    x, y, w, h = bbox
-    cx, cy = x + w / 2, y + h / 2
-    new_w, new_h = w * factor, h * factor
-    new_x = cx - new_w / 2
-    new_y = cy - new_h / 2
-    return _clamp_bbox([new_x, new_y, new_w, new_h])
-
-
-def shift_bbox(bbox: List[float], dx_frac: float, dy_frac: float) -> List[float]:
-    """Shift a bbox by a fraction of its size."""
-    x, y, w, h = bbox
-    new_x = x + w * dx_frac
-    new_y = y + h * dy_frac
-    return _clamp_bbox([new_x, new_y, w, h])
-
-
-def shrink_bbox(bbox: List[float], factor: float) -> List[float]:
-    """Shrink a bbox (factor < 1.0)."""
-    return expand_bbox(bbox, factor)
-
-
 def generate_spurious_annotation(
     existing_bboxes: List[List[float]], rng: random.Random
 ) -> Dict:
@@ -194,54 +157,21 @@ def corrupt_annotations(
     seed: int,
 ) -> Tuple[List[Dict], List[str]]:
     """
-    Corrupt gold annotations based on difficulty level.
+    Corrupt gold annotations conceptually (no geometry shifts) based on difficulty level.
 
-    Returns:
-        (corrupted_annotations, corruption_log)
-        corruption_log: list of strings describing what was corrupted (for debugging)
+    Difficulties:
+    - "spurious": Adds 2-4 entirely fake boxes.
+    - "classes": Swaps 30% of class labels (similar and different) + adds some spurious.
+    - "missing": Deletes 15-20% of annotations completely. VLM must FLAG_MISSING.
     """
     rng = random.Random(seed)
     corrupted = copy.deepcopy(gold_annotations)
     log = []
 
-    if difficulty == "easy":
-        # Task 1: Obvious bbox errors only (no class changes)
-        corruption_rate = 0.35
-        n_corrupt = max(1, int(len(corrupted) * corruption_rate))
-        indices = list(range(len(corrupted)))
-        rng.shuffle(indices)
-        corrupt_indices = indices[:n_corrupt]
-
-        for idx in corrupt_indices:
-            action = rng.choice(["expand", "shift", "shrink", "delete"])
-            ann = corrupted[idx]
-
-            if action == "expand":
-                factor = rng.uniform(1.5, 2.5)
-                ann["bbox"] = expand_bbox(ann["bbox"], factor)
-                log.append(f"Expanded ann {ann['id']} by {factor:.1f}x")
-
-            elif action == "shift":
-                dx = rng.uniform(-0.4, 0.4)
-                dy = rng.uniform(-0.4, 0.4)
-                ann["bbox"] = shift_bbox(ann["bbox"], dx, dy)
-                log.append(f"Shifted ann {ann['id']} by ({dx:.2f}, {dy:.2f})")
-
-            elif action == "shrink":
-                factor = rng.uniform(0.3, 0.6)
-                ann["bbox"] = shrink_bbox(ann["bbox"], factor)
-                log.append(f"Shrunk ann {ann['id']} by {factor:.1f}x")
-
-            elif action == "delete":
-                log.append(f"Deleted ann {ann['id']} ({ann['class_label']})")
-                corrupted[idx] = None  # mark for removal
-
-        # Remove deleted
-        corrupted = [a for a in corrupted if a is not None]
-
-        # Add 2-3 spurious annotations
+    if difficulty == "spurious":
+        # Task 1: Spurious removal only
         existing_bboxes = [a["bbox"] for a in corrupted]
-        n_spurious = rng.randint(2, 3)
+        n_spurious = rng.randint(2, 4)
         next_id = max((a["id"] for a in corrupted), default=0) + 1
         for i in range(n_spurious):
             spur = generate_spurious_annotation(existing_bboxes, rng)
@@ -250,8 +180,8 @@ def corrupt_annotations(
             existing_bboxes.append(spur["bbox"])
             log.append(f"Added spurious ann {spur['id']} ({spur['class_label']})")
 
-    elif difficulty == "medium":
-        # Task 2: bbox errors + class confusion
+    elif difficulty == "classes":
+        # Task 2: Fix Classes
         corruption_rate = 0.30
         n_corrupt = max(2, int(len(corrupted) * corruption_rate))
         indices = list(range(len(corrupted)))
@@ -259,51 +189,29 @@ def corrupt_annotations(
         corrupt_indices = indices[:n_corrupt]
 
         for idx in corrupt_indices:
-            action = rng.choice([
-                "expand", "shift", "wrong_similar_class",
-                "wrong_different_class", "delete",
-            ])
+            action = rng.choice(["wrong_similar_class", "wrong_different_class"])
             ann = corrupted[idx]
+            old_cls = ann["class_label"]
 
-            if action == "expand":
-                factor = rng.uniform(1.3, 2.0)
-                ann["bbox"] = expand_bbox(ann["bbox"], factor)
-                log.append(f"Expanded ann {ann['id']} by {factor:.1f}x")
-
-            elif action == "shift":
-                dx = rng.uniform(-0.3, 0.3)
-                dy = rng.uniform(-0.3, 0.3)
-                ann["bbox"] = shift_bbox(ann["bbox"], dx, dy)
-                log.append(f"Shifted ann {ann['id']}")
-
-            elif action == "wrong_similar_class":
-                old_cls = ann["class_label"]
+            if action == "wrong_similar_class":
                 similar = SIMILAR_CLASSES.get(old_cls, [])
                 if similar:
                     new_cls = rng.choice(similar)
                     ann["class_label"] = new_cls
-                    log.append(f"Changed ann {ann['id']} class: {old_cls} → {new_cls}")
+                    log.append(f"Changed ann {ann['id']} class: {old_cls} → {new_cls} (similar)")
                 else:
-                    # Fallback to a different class
                     candidates = [c for c in ALL_CLASSES if c != old_cls]
                     ann["class_label"] = rng.choice(candidates)
-                    log.append(f"Changed ann {ann['id']} class: {old_cls} → {ann['class_label']}")
+                    log.append(f"Changed ann {ann['id']} class: {old_cls} → {ann['class_label']} (fallback)")
 
             elif action == "wrong_different_class":
-                old_cls = ann["class_label"]
                 candidates = [c for c in ALL_CLASSES if c != old_cls]
                 ann["class_label"] = rng.choice(candidates)
-                log.append(f"Changed ann {ann['id']} class: {old_cls} → {ann['class_label']} (wrong category)")
+                log.append(f"Changed ann {ann['id']} class: {old_cls} → {ann['class_label']} (different)")
 
-            elif action == "delete":
-                log.append(f"Deleted ann {ann['id']} ({ann['class_label']})")
-                corrupted[idx] = None
-
-        corrupted = [a for a in corrupted if a is not None]
-
-        # Add 3-4 spurious
+        # Add 1-2 spurious just to keep them on their toes
         existing_bboxes = [a["bbox"] for a in corrupted]
-        n_spurious = rng.randint(3, 4)
+        n_spurious = rng.randint(1, 2)
         next_id = max((a["id"] for a in corrupted), default=0) + 1
         for i in range(n_spurious):
             spur = generate_spurious_annotation(existing_bboxes, rng)
@@ -312,101 +220,32 @@ def corrupt_annotations(
             existing_bboxes.append(spur["bbox"])
             log.append(f"Added spurious ann {spur['id']} ({spur['class_label']})")
 
-    elif difficulty == "hard":
-        # Task 3: Subtle errors + class confusion + some bbox
-        corruption_rate = 0.25
-        n_corrupt = max(2, int(len(corrupted) * corruption_rate))
-        indices = list(range(len(corrupted)))
-        rng.shuffle(indices)
-        corrupt_indices = indices[:n_corrupt]
-
-        for idx in corrupt_indices:
-            action = rng.choice([
-                "subtle_shift", "wrong_similar_class",
-                "wrong_similar_class", "delete", "subtle_expand",
-            ])
-            ann = corrupted[idx]
-
-            if action == "subtle_shift":
-                dx = rng.uniform(-0.15, 0.15)
-                dy = rng.uniform(-0.15, 0.15)
-                ann["bbox"] = shift_bbox(ann["bbox"], dx, dy)
-                log.append(f"Subtly shifted ann {ann['id']}")
-
-            elif action == "subtle_expand":
-                factor = rng.uniform(1.15, 1.4)
-                ann["bbox"] = expand_bbox(ann["bbox"], factor)
-                log.append(f"Subtly expanded ann {ann['id']}")
-
-            elif action == "wrong_similar_class":
-                old_cls = ann["class_label"]
-                similar = SIMILAR_CLASSES.get(old_cls, [])
-                if similar:
-                    new_cls = rng.choice(similar)
-                    ann["class_label"] = new_cls
-                    log.append(f"Changed ann {ann['id']}: {old_cls} → {new_cls} (similar)")
-                else:
-                    candidates = [c for c in ALL_CLASSES if c != old_cls]
-                    ann["class_label"] = rng.choice(candidates)
-                    log.append(f"Changed ann {ann['id']}: {old_cls} → {ann['class_label']}")
-
-            elif action == "delete":
-                log.append(f"Deleted ann {ann['id']}")
-                corrupted[idx] = None
-
-        corrupted = [a for a in corrupted if a is not None]
-
-        # Add 2-3 spurious
-        existing_bboxes = [a["bbox"] for a in corrupted]
-        n_spurious = rng.randint(2, 3)
-        next_id = max((a["id"] for a in corrupted), default=0) + 1
-        for i in range(n_spurious):
-            spur = generate_spurious_annotation(existing_bboxes, rng)
-            spur["id"] = next_id + i
-            corrupted.append(spur)
-            existing_bboxes.append(spur["bbox"])
-            log.append(f"Added spurious ann {spur['id']}")
-
-    elif difficulty == "easy_safety":
-        # Task: Safety / Policy Violation
-        # Provide uncorrupted boxes but VLM must flag certain items based on safety policy.
-        # Environment text will define "No humans" or similar. We don't corrupt the box.
-        pass
-
-    elif difficulty == "medium_attributes":
-        # Task: Attribute / Caption Audit
-        colors = ["red ", "blue ", "black ", "white ", "silver ", "yellow "]
-        corruption_rate = 0.50
-        n_corrupt = max(2, int(len(corrupted) * corruption_rate))
-        indices = list(range(len(corrupted)))
-        rng.shuffle(indices)
-        
-        for idx in indices:
-            ann = corrupted[idx]
-            old_cls = ann["class_label"]
-            correct_color = rng.choice(colors)
-            if idx in indices[:n_corrupt]:
-                # Corrupt it: assign wrong color prefix
-                wrong_color = rng.choice([c for c in colors if c != correct_color])
-                ann["class_label"] = wrong_color + old_cls
-                log.append(f"Attribute corrupted ann {ann['id']}: should be {correct_color}{old_cls}, is {wrong_color}{old_cls}")
-            else:
-                # Keep it "correct" with an attribute
-                ann["class_label"] = correct_color + old_cls
-
-    elif difficulty == "hard_missing":
-        # Task: Missing Contextual Annotations
-        # Delete 40% of annotations without adding spurious ones. VLM must list them as missing.
-        delete_rate = 0.40
-        n_delete = max(2, int(len(corrupted) * delete_rate))
+    elif difficulty == "missing":
+        # Task 3: Missing items evaluation
+        # Randomly delete 15-20% of annotations completely
+        delete_rate = rng.uniform(0.15, 0.20)
+        n_delete = max(1, int(len(corrupted) * delete_rate))
         indices = list(range(len(corrupted)))
         rng.shuffle(indices)
         delete_indices = indices[:n_delete]
 
         for idx in delete_indices:
             ann = corrupted[idx]
-            log.append(f"Missing Obj created: Removed ann {ann['id']} ({ann['class_label']})")
+            log.append(f"Missing Obj Created: Removed ann {ann['id']} ({ann['class_label']})")
             corrupted[idx] = None
+        
         corrupted = [a for a in corrupted if a is not None]
+
+        # Also add a little bit of class confusion
+        corruption_rate = 0.20
+        n_corrupt = max(1, int(len(corrupted) * corruption_rate))
+        remaining_indices = list(range(len(corrupted)))
+        rng.shuffle(remaining_indices)
+        for idx in remaining_indices[:n_corrupt]:
+            ann = corrupted[idx]
+            old_cls = ann["class_label"]
+            candidates = [c for c in ALL_CLASSES if c != old_cls]
+            ann["class_label"] = rng.choice(candidates)
+            log.append(f"Changed class: {old_cls} -> {ann['class_label']}")
 
     return corrupted, log

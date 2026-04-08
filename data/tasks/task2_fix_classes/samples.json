@@ -306,7 +306,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2000
   },
   {
@@ -553,7 +553,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2001
   },
   {
@@ -842,7 +842,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2002
   },
   {
@@ -963,7 +963,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2003
   },
   {
@@ -1168,7 +1168,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2004
   },
   {
@@ -1457,7 +1457,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2005
   },
   {
@@ -1599,7 +1599,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2006
   },
   {
@@ -1846,7 +1846,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2007
   },
   {
@@ -2135,7 +2135,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2008
   },
   {
@@ -2361,7 +2361,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2009
   },
   {
@@ -2629,7 +2629,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2010
   },
   {
@@ -2855,7 +2855,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2011
   },
   {
@@ -2976,7 +2976,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2012
   },
   {
@@ -3181,7 +3181,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2013
   },
   {
@@ -3512,7 +3512,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2014
   },
   {
@@ -3843,7 +3843,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2015
   },
   {
@@ -4006,7 +4006,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2016
   },
   {
@@ -4211,7 +4211,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2017
   },
   {
@@ -4500,7 +4500,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2018
   },
   {
@@ -4684,7 +4684,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2019
   },
   {
@@ -4805,7 +4805,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2020
   },
   {
@@ -5031,7 +5031,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2021
   },
   {
@@ -5299,7 +5299,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2022
   },
   {
@@ -5525,7 +5525,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2023
   },
   {
@@ -5730,7 +5730,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2024
   },
   {
@@ -5977,7 +5977,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2025
   },
   {
@@ -6224,7 +6224,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2026
   },
   {
@@ -6492,7 +6492,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2027
   },
   {
@@ -6697,7 +6697,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2028
   },
   {
@@ -6923,7 +6923,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2029
   },
   {
@@ -7254,7 +7254,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2030
   },
   {
@@ -7438,7 +7438,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2031
   },
   {
@@ -7622,7 +7622,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2032
   },
   {
@@ -7869,7 +7869,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2033
   },
   {
@@ -8200,7 +8200,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2034
   },
   {
@@ -8363,7 +8363,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2035
   },
   {
@@ -8568,7 +8568,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2036
   },
   {
@@ -8710,7 +8710,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2037
   },
   {
@@ -8999,7 +8999,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2038
   },
   {
@@ -9330,7 +9330,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2039
   },
   {
@@ -9493,7 +9493,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2040
   },
   {
@@ -9698,7 +9698,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2041
   },
   {
@@ -9819,7 +9819,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2042
   },
   {
@@ -9940,7 +9940,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2043
   },
   {
@@ -10124,7 +10124,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2044
   },
   {
@@ -10371,7 +10371,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2045
   },
   {
@@ -10576,7 +10576,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2046
   },
   {
@@ -10886,7 +10886,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2047
   },
   {
@@ -11175,7 +11175,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2048
   },
   {
@@ -11401,7 +11401,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2049
   },
   {
@@ -11690,7 +11690,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2050
   },
   {
@@ -11916,7 +11916,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2051
   },
   {
@@ -12079,7 +12079,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2052
   },
   {
@@ -12410,7 +12410,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2053
   },
   {
@@ -12741,7 +12741,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2054
   },
   {
@@ -13030,7 +13030,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2055
   },
   {
@@ -13214,7 +13214,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2056
   },
   {
@@ -13419,7 +13419,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2057
   },
   {
@@ -13750,7 +13750,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2058
   },
   {
@@ -13934,7 +13934,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2059
   },
   {
@@ -14097,7 +14097,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2060
   },
   {
@@ -14365,7 +14365,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2061
   },
   {
@@ -14654,7 +14654,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2062
   },
   {
@@ -14943,7 +14943,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2063
   },
   {
@@ -15169,7 +15169,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2064
   },
   {
@@ -15290,7 +15290,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2065
   },
   {
@@ -15474,7 +15474,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2066
   },
   {
@@ -15679,7 +15679,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2067
   },
   {
@@ -15863,7 +15863,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2068
   },
   {
@@ -15984,7 +15984,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2069
   },
   {
@@ -16231,7 +16231,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2070
   },
   {
@@ -16457,7 +16457,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2071
   },
   {
@@ -16683,7 +16683,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2072
   },
   {
@@ -16804,7 +16804,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2073
   },
   {
@@ -17051,7 +17051,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2074
   },
   {
@@ -17193,7 +17193,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2075
   },
   {
@@ -17398,7 +17398,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2076
   },
   {
@@ -17708,7 +17708,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2077
   },
   {
@@ -18039,7 +18039,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2078
   },
   {
@@ -18328,7 +18328,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2079
   },
   {
@@ -18638,7 +18638,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2080
   },
   {
@@ -18759,7 +18759,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2081
   },
   {
@@ -18922,7 +18922,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2082
   },
   {
@@ -19148,7 +19148,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2083
   },
   {
@@ -19290,7 +19290,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2084
   },
   {
@@ -19495,7 +19495,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2085
   },
   {
@@ -19700,7 +19700,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2086
   },
   {
@@ -19947,7 +19947,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2087
   },
   {
@@ -20068,7 +20068,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2088
   },
   {
@@ -20378,7 +20378,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2089
   },
   {
@@ -20667,7 +20667,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2090
   },
   {
@@ -20914,7 +20914,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2091
   },
   {
@@ -21098,7 +21098,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2092
   },
   {
@@ -21366,7 +21366,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2093
   },
   {
@@ -21634,7 +21634,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2094
   },
   {
@@ -21797,7 +21797,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2095
   },
   {
@@ -22065,7 +22065,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2096
   },
   {
@@ -22228,7 +22228,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2097
   },
   {
@@ -22475,7 +22475,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2098
   },
   {
@@ -22806,7 +22806,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2099
   },
   {
@@ -23095,7 +23095,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2100
   },
   {
@@ -23342,7 +23342,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2101
   },
   {
@@ -23526,7 +23526,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2102
   },
   {
@@ -23836,7 +23836,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2103
   },
   {
@@ -24041,7 +24041,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2104
   },
   {
@@ -24225,7 +24225,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2105
   },
   {
@@ -24493,7 +24493,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2106
   },
   {
@@ -24719,7 +24719,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2107
   },
   {
@@ -25008,7 +25008,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2108
   },
   {
@@ -25150,7 +25150,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2109
   },
   {
@@ -25334,7 +25334,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2110
   },
   {
@@ -25560,7 +25560,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2111
   },
   {
@@ -25807,7 +25807,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2112
   },
   {
@@ -26075,7 +26075,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2113
   },
   {
@@ -26280,7 +26280,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2114
   },
   {
@@ -26527,7 +26527,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2115
   },
   {
@@ -26669,7 +26669,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2116
   },
   {
@@ -26853,7 +26853,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2117
   },
   {
@@ -27037,7 +27037,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2118
   },
   {
@@ -27179,7 +27179,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2119
   },
   {
@@ -27342,7 +27342,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2120
   },
   {
@@ -27547,7 +27547,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2121
   },
   {
@@ -27752,7 +27752,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2122
   },
   {
@@ -27936,7 +27936,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2123
   },
   {
@@ -28141,7 +28141,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2124
   },
   {
@@ -28346,7 +28346,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2125
   },
   {
@@ -28656,7 +28656,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2126
   },
   {
@@ -28861,7 +28861,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2127
   },
   {
@@ -29171,7 +29171,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2128
   },
   {
@@ -29502,7 +29502,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2129
   },
   {
@@ -29644,7 +29644,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2130
   },
   {
@@ -29765,7 +29765,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2131
   },
   {
@@ -29928,7 +29928,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2132
   },
   {
@@ -30112,7 +30112,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2133
   },
   {
@@ -30359,7 +30359,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2134
   },
   {
@@ -30690,7 +30690,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2135
   },
   {
@@ -30832,7 +30832,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2136
   },
   {
@@ -30974,7 +30974,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2137
   },
   {
@@ -31200,7 +31200,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2138
   },
   {
@@ -31405,7 +31405,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2139
   },
   {
@@ -31610,7 +31610,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2140
   },
   {
@@ -31773,7 +31773,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2141
   },
   {
@@ -32083,7 +32083,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2142
   },
   {
@@ -32330,7 +32330,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2143
   },
   {
@@ -32661,7 +32661,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2144
   },
   {
@@ -32866,7 +32866,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2145
   },
   {
@@ -32987,7 +32987,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2146
   },
   {
@@ -33255,7 +33255,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2147
   },
   {
@@ -33418,7 +33418,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2148
   },
   {
@@ -33728,7 +33728,7 @@
       }
     ],
     "task_id": "fix_classes",
-    "difficulty": "medium",
+    "difficulty": "classes",
     "seed": 2149
   }
 ]
